@@ -85,12 +85,13 @@ impl FeelTheBasaApp {
             self.lock.set(false);
             return;
         }
+
         let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
         let dec = i32::from_ne_bytes(ip);
         self.dec_edit.set_text(&format!("{}", dec));
         self.bin_edit.set_text(&format!("{:b}", dec));
         self.hex_edit.set_text(&format!("{:X}", dec));
-        self.ascii_edit.set_text(&format!("{}", dec as u8 as char));
+        self.ascii_edit.set_text(&ip.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
 
         self.lock.set(false);
     }
