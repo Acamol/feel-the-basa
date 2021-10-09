@@ -107,6 +107,18 @@ pub struct FeelTheBasaApp {
 }
 
 impl FeelTheBasaApp {
+    const NRBITS: i32 = 8;
+    const TYPEBITS: i32 = 8;
+    const SIZEBITS: i32 = 14;
+    const DIRBITS: i32 = 2;
+    const NRMASK: i32 = (1 << FeelTheBasaApp::NRBITS) - 1;
+    const TYPEMASK: i32 = (1 << FeelTheBasaApp::TYPEBITS) - 1;
+    const SIZEMASK: i32 = (1 << FeelTheBasaApp::SIZEBITS) - 1;
+    const DIRMASK: i32 = (1 << FeelTheBasaApp::DIRBITS) -1;
+    const NRSHIFT: i32 = 0;
+    const TYPESHIFT: i32 = FeelTheBasaApp::NRSHIFT + FeelTheBasaApp::NRBITS;
+    const SIZESHIFT: i32 = FeelTheBasaApp::TYPEBITS + FeelTheBasaApp::TYPEBITS;
+    const DIRSHIFT: i32 = FeelTheBasaApp::SIZESHIFT + FeelTheBasaApp::SIZEBITS;
 
     fn ip_change(&self, ti: &nwg::TextInput) {
         if self.lock.get() {
@@ -123,10 +135,20 @@ impl FeelTheBasaApp {
 
         let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
         let dec = u32::from_ne_bytes(ip);
+        let dec32 = dec as i32;
         self.dec_edit.set_text(&format!("{}", dec));
         self.bin_edit.set_text(&format!("{:b}", dec));
         self.hex_edit.set_text(&format!("{:X}", dec));
         self.ascii_edit.set_text(&ip.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+        self.ioctl_family_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::TYPESHIFT) & FeelTheBasaApp::TYPEMASK));
+        self.ioctl_size_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::SIZESHIFT) & FeelTheBasaApp::SIZEMASK));
+        let dir = match (dec32 >> FeelTheBasaApp::DIRSHIFT) & FeelTheBasaApp::DIRMASK {
+            0b0..=0b1 => "None",
+            0b10 => "Read",
+            0b11 => "Write",
+            _ => "ERROR"
+        };
+        self.ioctl_dir_edit.set_text(dir);
 
         self.lock.set(false);
     }
@@ -143,11 +165,22 @@ impl FeelTheBasaApp {
         }
 
         if let Ok(r) = isize::from_str_radix(&ti.text(), 2) {
+            let dec32 = r as i32;
             self.dec_edit.set_text(&format!("{}", r));
             self.hex_edit.set_text(&format!("{:X}", r));
             let x = r.to_be_bytes();
             self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
             self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+            self.ioctl_number_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
+            self.ioctl_family_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::TYPESHIFT) & FeelTheBasaApp::TYPEMASK));
+            self.ioctl_size_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::SIZESHIFT) & FeelTheBasaApp::SIZEMASK));
+            let dir = match (dec32 >> FeelTheBasaApp::DIRSHIFT) & FeelTheBasaApp::DIRMASK {
+                0b0..=0b1 => "None",
+                0b10 => "Read",
+                0b11 => "Write",
+                _ => "ERROR"
+            };
+            self.ioctl_dir_edit.set_text(dir);
         }
 
         self.lock.set(false);
@@ -166,11 +199,23 @@ impl FeelTheBasaApp {
         }
 
         if let Ok(r) = isize::from_str_radix(s, 16) {
+            let dec32 = r as i32;
             self.dec_edit.set_text(&format!("{}", r));
             let x = r.to_be_bytes();
             self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
             self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
             self.bin_edit.set_text(&format!("{:b}", r));
+            self.ioctl_number_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
+            self.ioctl_number_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
+            self.ioctl_family_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::TYPESHIFT) & FeelTheBasaApp::TYPEMASK));
+            self.ioctl_size_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::SIZESHIFT) & FeelTheBasaApp::SIZEMASK));
+            let dir = match (dec32 >> FeelTheBasaApp::DIRSHIFT) & FeelTheBasaApp::DIRMASK {
+                0b0..=0b1 => "None",
+                0b10 => "Read",
+                0b11 => "Write",
+                _ => "ERROR"
+            };
+            self.ioctl_dir_edit.set_text(dir);
         }
         self.lock.set(false);
     }
@@ -189,10 +234,21 @@ impl FeelTheBasaApp {
 
         if let Ok(r) = i64::from_str_radix(s, 10) {
             let x = r.to_be_bytes();
+            let dec32 = r as i32;
             self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
             self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
             self.bin_edit.set_text(&format!("{:b}", r));
             self.hex_edit.set_text(&format!("{:X}", r));
+            self.ioctl_number_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
+            self.ioctl_family_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::TYPESHIFT) & FeelTheBasaApp::TYPEMASK));
+            self.ioctl_size_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::SIZESHIFT) & FeelTheBasaApp::SIZEMASK));
+            let dir = match (dec32 >> FeelTheBasaApp::DIRSHIFT) & FeelTheBasaApp::DIRMASK {
+                0b0..=0b1 => "None",
+                0b10 => "Read",
+                0b11 => "Write",
+                _ => "ERROR"
+            };
+            self.ioctl_dir_edit.set_text(dir);
         }
         self.lock.set(false);
     }
@@ -214,10 +270,21 @@ impl FeelTheBasaApp {
         }
         let b = [bytes[7], bytes[6], bytes[5], bytes[4], bytes[3], bytes[2], bytes[1], bytes[0]];
         let dec = i64::from_ne_bytes(b);
-        self.dec_edit.set_text(&format!("{}", dec));
+        let dec32 = dec as i32;
+        self.dec_edit.set_text(&format!("{}", dec as u64));
         self.ip_edit.set_text(&format!("{}.{}.{}.{}", b[3], b[2], b[1], b[0]));
         self.bin_edit.set_text(&format!("{:b}", dec));
         self.hex_edit.set_text(&format!("{:X}", dec));
+        self.ioctl_number_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
+        self.ioctl_family_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::TYPESHIFT) & FeelTheBasaApp::TYPEMASK));
+        self.ioctl_size_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::SIZESHIFT) & FeelTheBasaApp::SIZEMASK));
+        let dir = match (dec32 >> FeelTheBasaApp::DIRSHIFT) & FeelTheBasaApp::DIRMASK {
+            0b0..=0b1 => "None",
+            0b10 => "Read",
+            0b11 => "Write",
+            _ => "ERROR"
+        };
+        self.ioctl_dir_edit.set_text(dir);
 
         self.lock.set(false);
     }
