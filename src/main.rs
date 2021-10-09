@@ -124,14 +124,13 @@ impl FeelTheBasaApp {
         if self.lock.get() {
             return;
         }
-        self.lock.set(true);
 
         let to = ti.text();
         let t: Vec<&str> = to.split(".").collect();
         if t.len() != 4 || t.iter().any(|x| x.is_empty() || x.chars().any(|y| !y.is_numeric()) || x.parse::<i32>().unwrap() > 255) {
-            self.lock.set(false);
             return;
         }
+        self.lock.set(true);
 
         let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
         let dec = u32::from_ne_bytes(ip);
@@ -157,12 +156,11 @@ impl FeelTheBasaApp {
         if self.lock.get() {
             return;
         }
-        self.lock.set(true);
 
         if ti.text().chars().any(|x| x != '0' && x != '1') {
-            self.lock.set(false);
             return;
         }
+        self.lock.set(true);
 
         if let Ok(r) = isize::from_str_radix(&ti.text(), 2) {
             let dec32 = r as i32;
@@ -190,13 +188,12 @@ impl FeelTheBasaApp {
         if self.lock.get() {
             return;
         }
-        self.lock.set(true);
 
         let s = &self.hex_edit.text().to_uppercase();
         if s.chars().any(|c| (c < '0' || c > '9') && (c < 'A' || c > 'F')) {
-            self.lock.set(false);
             return;
         }
+        self.lock.set(true);
 
         if let Ok(r) = isize::from_str_radix(s, 16) {
             let dec32 = r as i32;
@@ -224,13 +221,12 @@ impl FeelTheBasaApp {
         if self.lock.get() {
             return;
         }
-        self.lock.set(true);
 
         let s = &self.dec_edit.text();
         if s.chars().any(|c| c < '0' || c > '9') {
-            self.lock.set(false);
             return;
         }
+        self.lock.set(true);
 
         if let Ok(r) = i64::from_str_radix(s, 10) {
             let x = r.to_be_bytes();
@@ -257,13 +253,13 @@ impl FeelTheBasaApp {
         if self.lock.get() {
             return;
         }
-        self.lock.set(true);
 
         let s = &self.ascii_edit.text();
         if s.len() > 8 {
-            self.lock.set(false);
             return;
         }
+        self.lock.set(true);
+
         let mut bytes = s.bytes().collect::<VecDeque<_>>();
         while bytes.len() < 8 {
             bytes.push_front(0u8)
@@ -296,7 +292,7 @@ impl FeelTheBasaApp {
     fn window_key_press(&self, ent_data: &nwg::EventData) {
         match ent_data.on_key() {
             nwg::keys::ESCAPE => self.window.close(),
-            o => ()
+            _ => ()
         }
     }
 
