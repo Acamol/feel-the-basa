@@ -27,51 +27,82 @@ pub struct FeelTheBasaApp {
     #[nwg_layout_item(layout: grid, row: 0, col: 0)]
     dec_label: nwg::Label,
 
+    #[nwg_control(text: "Hex:")]
+    #[nwg_layout_item(layout: grid, row: 0, col: 1)]
+    hex_label: nwg::Label,
+
+    #[nwg_control(text: "ASCII:")]
+    #[nwg_layout_item(layout: grid, row: 0, col: 2)]
+    ascii_label: nwg::Label,
+
+    #[nwg_control(text: "IP:")]
+    #[nwg_layout_item(layout: grid, row: 0, col: 3)]
+    ip_label: nwg::Label,
+
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 0)]
     #[nwg_events( OnTextInput: [FeelTheBasaApp::dec_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     dec_edit: nwg::TextInput,
-
-    #[nwg_control(text: "Hex:")]
-    #[nwg_layout_item(layout: grid, row: 0, col: 1)]
-    hex_label: nwg::Label,
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 1)]
     #[nwg_events( OnTextInput: [FeelTheBasaApp::hex_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     hex_edit: nwg::TextInput,
 
-    #[nwg_control(text: "ASCII:")]
-    #[nwg_layout_item(layout: grid, row: 2, col: 0)]
-    ascii_label: nwg::Label,
-
     #[nwg_control(text: "")]
-    #[nwg_layout_item(layout: grid, row: 3, col: 0)]
+    #[nwg_layout_item(layout: grid, row: 1, col: 2)]
     #[nwg_events( OnTextInput: [FeelTheBasaApp::ascii_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     ascii_edit: nwg::TextInput,
 
-    #[nwg_control(text: "IP:")]
-    #[nwg_layout_item(layout: grid, row: 2, col: 1)]
-    ip_label: nwg::Label,
-
     #[nwg_control(text: "0.0.0.0")]
     #[nwg_events( OnTextInput: [FeelTheBasaApp::ip_change(SELF, CTRL)], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
-    #[nwg_layout_item(layout: grid, row: 3, col: 1)]
+    #[nwg_layout_item(layout: grid, row: 1, col: 3)]
     ip_edit: nwg::TextInput,
 
     #[nwg_control(text: "Bin:")]
-    #[nwg_layout_item(layout: grid, row: 4, col: 0, col_span: 2)]
+    #[nwg_layout_item(layout: grid, row: 2, col: 0, col_span: 1)]
     bin_label: nwg::Label,
 
     #[nwg_control(text: "0", limit: 64)]
-    #[nwg_layout_item(layout: grid, row: 5, col: 0, col_span: 2)]
+    #[nwg_layout_item(layout: grid, row: 3, col: 0, col_span: 4)]
     #[nwg_events( OnTextInput: [FeelTheBasaApp::bin_change(SELF, CTRL)], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     bin_edit: nwg::TextInput,
 
-    #[nwg_control(text: "IOCTL")]
-    #[nwg_layout_item(layout: grid, row: 6, col: 0, col_span: 2)]
-    ioctl_edit: nwg::TextInput,
+    #[nwg_control(text: "Number:")]
+    #[nwg_layout_item(layout: grid, row: 4, col: 0, col_span: 1)]
+    ioctl_number_label: nwg::Label,
 
+    #[nwg_control(text: "Family:")]
+    #[nwg_layout_item(layout: grid, row: 4, col: 1, col_span: 1)]
+    ioctl_type_label: nwg::Label,
+
+    #[nwg_control(text: "Size:")]
+    #[nwg_layout_item(layout: grid, row: 4, col: 2, col_span: 1)]
+    ioctl_size_label: nwg::Label,
+
+    #[nwg_control(text: "Dir:")]
+    #[nwg_layout_item(layout: grid, row: 4, col: 3, col_span: 1)]
+    ioctl_dir_label: nwg::Label,
+
+    #[nwg_control(text: "0")]
+    #[nwg_layout_item(layout: grid, row: 5, col: 0, col_span: 1)]
+    #[nwg_events( OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
+    ioctl_number_edit: nwg::TextInput,
+
+    #[nwg_control(text: "0")]
+    #[nwg_layout_item(layout: grid, row: 5, col: 1, col_span: 1)]
+    #[nwg_events( OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
+    ioctl_family_edit: nwg::TextInput,
+
+    #[nwg_control(text: "0")]
+    #[nwg_layout_item(layout: grid, row: 5, col: 2, col_span: 1)]
+    #[nwg_events( OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
+    ioctl_size_edit: nwg::TextInput,
+
+    #[nwg_control(text: "0")]
+    #[nwg_layout_item(layout: grid, row: 5, col: 3, col_span: 1)]
+    #[nwg_events( OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
+    ioctl_dir_edit: nwg::TextInput,
     lock: Cell<bool>,
 }
 
@@ -91,7 +122,7 @@ impl FeelTheBasaApp {
         }
 
         let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
-        let dec = i32::from_ne_bytes(ip);
+        let dec = u32::from_ne_bytes(ip);
         self.dec_edit.set_text(&format!("{}", dec));
         self.bin_edit.set_text(&format!("{:b}", dec));
         self.hex_edit.set_text(&format!("{:X}", dec));
