@@ -11,12 +11,13 @@ extern crate native_windows_derive as nwd;
 use nwd::NwgUi;
 use nwg::NativeUi;
 use std::cell::Cell;
+use std::collections::VecDeque;
 
 
 #[derive(Default, NwgUi)]
 pub struct FeelTheBasaApp {
     #[nwg_control(size: (350, 180), position: (300, 300), title: "Feel the Basa")]
-    #[nwg_events( OnWindowClose: [FeelTheBasaApp::exit])]
+    #[nwg_events( OnWindowClose: [FeelTheBasaApp::exit], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     window: nwg::Window,
 
     #[nwg_layout(parent: window, spacing: 1)]
@@ -28,7 +29,7 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 0)]
-    #[nwg_events( OnTextInput: [FeelTheBasaApp::dec_change] )]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::dec_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     dec_edit: nwg::TextInput,
 
     #[nwg_control(text: "Hex:")]
@@ -37,7 +38,7 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 1)]
-    #[nwg_events( OnTextInput: [FeelTheBasaApp::hex_change]) ]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::hex_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     hex_edit: nwg::TextInput,
 
     #[nwg_control(text: "ASCII:")]
@@ -46,6 +47,7 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "")]
     #[nwg_layout_item(layout: grid, row: 3, col: 0)]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::ascii_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     ascii_edit: nwg::TextInput,
 
     #[nwg_control(text: "IP:")]
@@ -53,7 +55,7 @@ pub struct FeelTheBasaApp {
     ip_label: nwg::Label,
 
     #[nwg_control(text: "0.0.0.0")]
-    #[nwg_events( OnTextInput: [FeelTheBasaApp::ip_change(SELF, CTRL)])]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::ip_change(SELF, CTRL)], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     #[nwg_layout_item(layout: grid, row: 3, col: 1)]
     ip_edit: nwg::TextInput,
 
@@ -63,7 +65,7 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0", limit: 64)]
     #[nwg_layout_item(layout: grid, row: 5, col: 0, col_span: 2)]
-    #[nwg_events( OnTextInput: [FeelTheBasaApp::bin_change(SELF, CTRL)])]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::bin_change(SELF, CTRL)], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     bin_edit: nwg::TextInput,
 
     #[nwg_control(text: "IOCTL")]
@@ -166,6 +168,13 @@ impl FeelTheBasaApp {
     
     fn exit(&self) {
         nwg::stop_thread_dispatch();
+    }
+
+    fn window_key_press(&self, ent_data: &nwg::EventData) {
+        match ent_data.on_key() {
+            nwg::keys::ESCAPE => self.window.close(),
+            o => ()
+        }
     }
 
 }
