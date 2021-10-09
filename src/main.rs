@@ -36,6 +36,7 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 1)]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::hex_change]) ]
     hex_edit: nwg::TextInput,
 
     #[nwg_control(text: "ASCII:")]
@@ -115,6 +116,28 @@ impl FeelTheBasaApp {
             self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
         }
 
+        self.lock.set(false);
+    }
+
+    fn hex_change(&self) {
+        if self.lock.get() {
+            return;
+        }
+        self.lock.set(true);
+
+        let s = &self.hex_edit.text().to_uppercase();
+        if s.chars().any(|c| (c < '0' || c > '9') && (c < 'A' || c > 'F')) {
+            self.lock.set(false);
+            return;
+        }
+
+        if let Ok(r) = isize::from_str_radix(s, 16) {
+            self.dec_edit.set_text(&format!("{}", r));
+            let x = r.to_be_bytes();
+            self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
+            self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+            self.bin_edit.set_text(&format!("{:b}", r));
+        }
         self.lock.set(false);
     }
     
