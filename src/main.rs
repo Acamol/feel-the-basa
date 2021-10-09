@@ -28,6 +28,7 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 0)]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::dec_change] )]
     dec_edit: nwg::TextInput,
 
     #[nwg_control(text: "Hex:")]
@@ -137,6 +138,28 @@ impl FeelTheBasaApp {
             self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
             self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
             self.bin_edit.set_text(&format!("{:b}", r));
+        }
+        self.lock.set(false);
+    }
+
+    fn dec_change(&self) {
+        if self.lock.get() {
+            return;
+        }
+        self.lock.set(true);
+
+        let s = &self.dec_edit.text();
+        if s.chars().any(|c| c < '0' || c > '9') {
+            self.lock.set(false);
+            return;
+        }
+
+        if let Ok(r) = i64::from_str_radix(s, 10) {
+            let x = r.to_be_bytes();
+            self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
+            self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+            self.bin_edit.set_text(&format!("{:b}", r));
+            self.hex_edit.set_text(&format!("{:X}", r));
         }
         self.lock.set(false);
     }
