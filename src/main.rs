@@ -31,9 +31,9 @@ pub struct FeelTheBasaApp {
     #[nwg_layout_item(layout: grid, row: 0, col: 1)]
     hex_label: nwg::Label,
 
-    #[nwg_control(text: "ASCII:")]
+    #[nwg_control(text: "Text:")]
     #[nwg_layout_item(layout: grid, row: 0, col: 2)]
-    ascii_label: nwg::Label,
+    text_label: nwg::Label,
 
     #[nwg_control(text: "IP:")]
     #[nwg_layout_item(layout: grid, row: 0, col: 3)]
@@ -51,8 +51,8 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "")]
     #[nwg_layout_item(layout: grid, row: 1, col: 2)]
-    #[nwg_events( OnTextInput: [FeelTheBasaApp::ascii_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
-    ascii_edit: nwg::TextInput,
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::text_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
+    text_edit: nwg::TextInput,
 
     #[nwg_control(text: "0.0.0.0")]
     #[nwg_events( OnTextInput: [FeelTheBasaApp::ip_change(SELF, CTRL)], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
@@ -138,7 +138,7 @@ impl FeelTheBasaApp {
         self.dec_edit.set_text(&format!("{}", dec));
         self.bin_edit.set_text(&format!("{:b}", dec));
         self.hex_edit.set_text(&format!("{:X}", dec));
-        self.ascii_edit.set_text(&ip.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+        self.text_edit.set_text(&ip.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
         self.ioctl_family_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::TYPESHIFT) & FeelTheBasaApp::TYPEMASK));
         self.ioctl_size_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::SIZESHIFT) & FeelTheBasaApp::SIZEMASK));
         let dir = match (dec32 >> FeelTheBasaApp::DIRSHIFT) & FeelTheBasaApp::DIRMASK {
@@ -168,7 +168,7 @@ impl FeelTheBasaApp {
             self.hex_edit.set_text(&format!("{:X}", r));
             let x = r.to_be_bytes();
             self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
-            self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+            self.text_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
             self.ioctl_number_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
             self.ioctl_family_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::TYPESHIFT) & FeelTheBasaApp::TYPEMASK));
             self.ioctl_size_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::SIZESHIFT) & FeelTheBasaApp::SIZEMASK));
@@ -200,7 +200,7 @@ impl FeelTheBasaApp {
             self.dec_edit.set_text(&format!("{}", r));
             let x = r.to_be_bytes();
             self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
-            self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+            self.text_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
             self.bin_edit.set_text(&format!("{:b}", r));
             self.ioctl_number_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
             self.ioctl_number_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
@@ -232,7 +232,7 @@ impl FeelTheBasaApp {
             let x = r.to_be_bytes();
             let dec32 = r as i32;
             self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
-            self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+            self.text_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
             self.bin_edit.set_text(&format!("{:b}", r));
             self.hex_edit.set_text(&format!("{:X}", r));
             self.ioctl_number_edit.set_text(&format!("{}", (dec32 >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
@@ -249,12 +249,12 @@ impl FeelTheBasaApp {
         self.lock.set(false);
     }
 
-    fn ascii_change(&self) {
+    fn text_change(&self) {
         if self.lock.get() {
             return;
         }
 
-        let s = &self.ascii_edit.text();
+        let s = &self.text_edit.text();
         if s.len() > 8 {
             return;
         }
