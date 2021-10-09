@@ -10,6 +10,7 @@ extern crate native_windows_derive as nwd;
 
 use nwd::NwgUi;
 use nwg::NativeUi;
+use std::cell::Cell;
 
 
 #[derive(Default, NwgUi)]
@@ -34,6 +35,7 @@ pub struct FeelTheBasaApp {
     ascii_edit: nwg::TextInput,
 
     #[nwg_control(text: "IP")]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::ip_change(SELF, CTRL)])]
     #[nwg_layout_item(layout: grid, row: 1, col: 1)]
     ip_edit: nwg::TextInput,
 
@@ -42,11 +44,44 @@ pub struct FeelTheBasaApp {
     #[nwg_events( OnTextInput: [FeelTheBasaApp::bin_change(SELF, CTRL)])]
     bin_edit: nwg::TextInput,
 
+    lock: Cell<bool>,
 }
 
 impl FeelTheBasaApp {
 
+    fn ip_change(&self, ti: &nwg::TextInput) {
+        if self.lock.get() {
+            return;
+        }
+        self.lock.set(true);
+
+        let to = ti.text();
+        let t: Vec<&str> = to.split(".").collect();
+        if t.len() != 4 || t.iter().any(|x| x.is_empty() || x.chars().any(|y| !y.is_numeric()) || x.parse::<i32>().unwrap() > 255) {
+            self.lock.set(false);
+            return;
+        }
+        let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
+        let dec = i32::from_ne_bytes(ip);
+        self.dec_edit.set_text(&format!("{}", dec));
+        self.bin_edit.set_text(&format!("{:b}", dec));
+        self.hex_edit.set_text(&format!("{:X}", dec));
+        self.ascii_edit.set_text(&format!("{}", dec as u8 as char));
+
+        self.lock.set(false);
+    }
+
     fn bin_change(&self, ti: &nwg::TextInput) {
+        if self.lock.get() {
+            return;
+        }
+        self.lock.set(true);
+
+        if ti.text().chars().any(|x| x != '0' && x != '1') {
+            self.lock.set(false);
+            return;
+        }
+
         if let Ok(r) = isize::from_str_radix(&ti.text(), 2) {
             self.dec_edit.set_text(&format!("{}", r));
             self.hex_edit.set_text(&format!("{:X}", r));
@@ -54,6 +89,7 @@ impl FeelTheBasaApp {
             self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
             self.ascii_edit.set_text(&format!("{}", x[7] as char))
         }
+        self.lock.set(false);
     }
     
     fn exit(&self) {
