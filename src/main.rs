@@ -165,6 +165,31 @@ impl FeelTheBasaApp {
         }
         self.lock.set(false);
     }
+
+    fn ascii_change(&self) {
+        if self.lock.get() {
+            return;
+        }
+        self.lock.set(true);
+
+        let s = &self.ascii_edit.text();
+        if s.len() > 8 {
+            self.lock.set(false);
+            return;
+        }
+        let mut bytes = s.bytes().collect::<VecDeque<_>>();
+        while bytes.len() < 8 {
+            bytes.push_front(0u8)
+        }
+        let b = [bytes[7], bytes[6], bytes[5], bytes[4], bytes[3], bytes[2], bytes[1], bytes[0]];
+        let dec = i64::from_ne_bytes(b);
+        self.dec_edit.set_text(&format!("{}", dec));
+        self.ip_edit.set_text(&format!("{}.{}.{}.{}", b[3], b[2], b[1], b[0]));
+        self.bin_edit.set_text(&format!("{:b}", dec));
+        self.hex_edit.set_text(&format!("{:X}", dec));
+
+        self.lock.set(false);
+    }
     
     fn exit(&self) {
         nwg::stop_thread_dispatch();
