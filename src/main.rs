@@ -111,8 +111,9 @@ impl FeelTheBasaApp {
             self.hex_edit.set_text(&format!("{:X}", r));
             let x = r.to_be_bytes();
             self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[4], x[5], x[6], x[7]));
-            self.ascii_edit.set_text(&format!("{}", x[7] as char))
+            self.ascii_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
         }
+
         self.lock.set(false);
     }
     
