@@ -15,34 +15,58 @@ use std::cell::Cell;
 
 #[derive(Default, NwgUi)]
 pub struct FeelTheBasaApp {
-    #[nwg_control(size: (300, 150), position: (300, 300), title: "Feel the Basa")]
+    #[nwg_control(size: (350, 180), position: (300, 300), title: "Feel the Basa")]
     #[nwg_events( OnWindowClose: [FeelTheBasaApp::exit])]
     window: nwg::Window,
 
     #[nwg_layout(parent: window, spacing: 1)]
     grid: nwg::GridLayout,
 
-    #[nwg_control(text: "DEC")]
+    #[nwg_control(text: "Dec:")]
     #[nwg_layout_item(layout: grid, row: 0, col: 0)]
+    dec_label: nwg::Label,
+
+    #[nwg_control(text: "0")]
+    #[nwg_layout_item(layout: grid, row: 1, col: 0)]
     dec_edit: nwg::TextInput,
 
-    #[nwg_control(text: "HEX")]
+    #[nwg_control(text: "Hex:")]
     #[nwg_layout_item(layout: grid, row: 0, col: 1)]
+    hex_label: nwg::Label,
+
+    #[nwg_control(text: "0")]
+    #[nwg_layout_item(layout: grid, row: 1, col: 1)]
     hex_edit: nwg::TextInput,
 
-    #[nwg_control(text: "ASCII")]
-    #[nwg_layout_item(layout: grid, row: 1, col: 0)]
+    #[nwg_control(text: "ASCII:")]
+    #[nwg_layout_item(layout: grid, row: 2, col: 0)]
+    ascii_label: nwg::Label,
+
+    #[nwg_control(text: "")]
+    #[nwg_layout_item(layout: grid, row: 3, col: 0)]
     ascii_edit: nwg::TextInput,
 
-    #[nwg_control(text: "IP")]
+    #[nwg_control(text: "IP:")]
+    #[nwg_layout_item(layout: grid, row: 2, col: 1)]
+    ip_label: nwg::Label,
+
+    #[nwg_control(text: "0.0.0.0")]
     #[nwg_events( OnTextInput: [FeelTheBasaApp::ip_change(SELF, CTRL)])]
-    #[nwg_layout_item(layout: grid, row: 1, col: 1)]
+    #[nwg_layout_item(layout: grid, row: 3, col: 1)]
     ip_edit: nwg::TextInput,
 
-    #[nwg_control(text: "BIN")]
-    #[nwg_layout_item(layout: grid, row: 2, col: 0, col_span: 2)]
+    #[nwg_control(text: "Bin:")]
+    #[nwg_layout_item(layout: grid, row: 4, col: 0, col_span: 2)]
+    bin_label: nwg::Label,
+
+    #[nwg_control(text: "0", limit: 64)]
+    #[nwg_layout_item(layout: grid, row: 5, col: 0, col_span: 2)]
     #[nwg_events( OnTextInput: [FeelTheBasaApp::bin_change(SELF, CTRL)])]
     bin_edit: nwg::TextInput,
+
+    #[nwg_control(text: "IOCTL")]
+    #[nwg_layout_item(layout: grid, row: 6, col: 0, col_span: 2)]
+    ioctl_edit: nwg::TextInput,
 
     lock: Cell<bool>,
 }
@@ -100,7 +124,9 @@ impl FeelTheBasaApp {
 
 fn main() {
     nwg::init().expect("Failed to init Native Windows GUI");
-    nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
+    let mut font = nwg::Font::default();
+    nwg::Font::builder().family("Segoe UI").size(18).build(&mut font).expect("Failed to set default font");
+    nwg::Font::set_global_default(Some(font));
     let _app = FeelTheBasaApp::build_ui(Default::default()).expect("Failed to build UI");
     nwg::dispatch_thread_events();
 }
