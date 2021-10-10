@@ -35,20 +35,30 @@ pub struct FeelTheBasaApp {
     #[nwg_events( OnWindowClose: [FtBA::exit], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
     window: nwg::Window,
 
-    #[nwg_control(text: "File")]
+    #[nwg_control(text: "&File")]
     window_menu: nwg::Menu,
-
-    #[nwg_control(text: "Signed", parent: window_menu)]
-    #[nwg_events( OnMenuItemSelected: [FtBA::signed_check]) ]
-    signed_menu_item: nwg::MenuItem,
-
-    #[nwg_control(text: "About", parent: window_menu)]
-    #[nwg_events( OnMenuItemSelected: [FtBA::about])]
-    about_menu_item: nwg::MenuItem,
 
     #[nwg_control(text: "Close", parent: window_menu)]
     #[nwg_events( OnMenuItemSelected: [FtBA::exit])]
     exit_menu_item: nwg::MenuItem,
+
+    #[nwg_control(text: "&Mode")]
+    mode_menu: nwg::Menu,
+
+    #[nwg_control(text: "Signed", parent: mode_menu)]
+    #[nwg_events( OnMenuItemSelected: [FtBA::signed_check]) ]
+    signed_menu_item: nwg::MenuItem,
+
+    #[nwg_control(text: "&Help")]
+    help_menu: nwg::Menu,
+
+    #[nwg_control(text: "Hotkeys", parent: help_menu)]
+    #[nwg_events( OnMenuItemSelected: [FtBA::on_hotkeys])]
+    hotkeys_menu_item: nwg::MenuItem,
+
+    #[nwg_control(text: "About", parent: help_menu)]
+    #[nwg_events( OnMenuItemSelected: [FtBA::about])]
+    about_menu_item: nwg::MenuItem,
 
     #[nwg_layout(parent: window, spacing: 1)]
     grid: nwg::GridLayout,
@@ -114,7 +124,7 @@ pub struct FeelTheBasaApp {
     #[nwg_layout_item(layout: grid, row: 6, col: 2, col_span: 1)]
     ioctl_size_label: nwg::Label,
 
-    #[nwg_control(text: "Dir:")]
+    #[nwg_control(text: "Access Mode:")]
     #[nwg_layout_item(layout: grid, row: 6, col: 3, col_span: 1)]
     ioctl_dir_label: nwg::Label,
 
@@ -133,7 +143,7 @@ pub struct FeelTheBasaApp {
     #[nwg_events( OnTextInput: [FtBA::size_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
     ioctl_size_edit: nwg::TextInput,
 
-    #[nwg_control(text: "0")]
+    #[nwg_control(text: "None")]
     #[nwg_layout_item(layout: grid, row: 7, col: 3, col_span: 1)]
     #[nwg_events( OnTextInput: [FtBA::dir_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
     ioctl_dir_edit: nwg::TextInput,
@@ -391,7 +401,23 @@ impl FeelTheBasaApp {
     }
 
     fn about(&self) {
-        nwg::modal_info_message(&self.window, "Feel the Basa", &format!("Coded by Acamol, inspired by FeelTheBase.\nReach me at gaf@duck.com.\n\nVersion {}", option_env!("CARGO_PKG_VERSION").unwrap()));
+        let p = nwg::MessageParams {
+            title: "About",
+            content: &format!("Coded by Acamol, inspired by FeelTheBase.\nReach me at gaf@duck.com.\n\nVersion: {}", option_env!("CARGO_PKG_VERSION").unwrap()),
+            buttons: nwg::MessageButtons::Ok,
+            icons: nwg::MessageIcons::None
+        };
+        nwg::modal_message(&self.window, &p);
+    }
+
+    fn on_hotkeys(&self) {
+        let p = nwg::MessageParams {
+            title: "Hotkeys",
+            content: "Esc: exit\nEnter (Bin only): partition the input to bytes",
+            buttons: nwg::MessageButtons::Ok,
+            icons: nwg::MessageIcons::None
+        };
+        nwg::modal_message(&self.window, &p);
     }
 
     fn window_key_press(&self, ent_data: &nwg::EventData) {
