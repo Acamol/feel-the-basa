@@ -78,9 +78,9 @@ pub struct FeelTheBasaApp {
     #[nwg_layout_item(layout: grid, row: 2, col: 0, col_span: 1)]
     bin_label: nwg::Label,
 
-    #[nwg_control(text: "0", limit: 32)]
+    #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 3, col: 0, col_span: 4)]
-    #[nwg_events( OnTextInput: [FtBA::bin_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FtBA::bin_change], OnKeyRelease: [FtBA::window_key_press_on_bin(SELF, EVT_DATA)] )]
     bin_edit: nwg::TextInput,
 
     #[nwg_control(text: "IOCTL", h_align: nwg::HTextAlign::Center)]
@@ -126,6 +126,20 @@ pub struct FeelTheBasaApp {
     lock: Cell<bool>,
 }
 
+fn partition_bin_to_bytes(s: &str) -> String {
+    let mut partitioned = String::with_capacity(s.len());
+    let mut count = 0;
+    let t = s.chars().rev().filter(|&c| c != ' ');
+    for c in t {
+        if count > 0 && count % 8 == 0 {
+            partitioned.push(' ');
+        }
+        partitioned.push(c);
+        count += 1;
+    }
+
+    partitioned.chars().rev().collect()
+}
 
 impl FeelTheBasaApp {
     const NRBITS: u32 = 8;
@@ -150,7 +164,7 @@ impl FeelTheBasaApp {
         }
 
         if tip != TextInputType::Bin {
-            self.bin_edit.set_text(&format!("{:b}", dec));
+            self.bin_edit.set_text(&partition_bin_to_bytes(&format!("{:b}", dec)));
         }
 
         if tip != TextInputType::Hex {
@@ -212,12 +226,12 @@ impl FeelTheBasaApp {
             return;
         }
 
-        let bin_str = &self.bin_edit.text();
+        let bin_str: String = self.bin_edit.text().chars().filter(|&c| c != ' ').collect();
         if bin_str.chars().any(|x| x != '0' && x != '1') {
             return;
         }
 
-        if let Ok(r) = u32::from_str_radix(bin_str, 2) {
+        if let Ok(r) = u32::from_str_radix(&bin_str, 2) {
             self.refresh_value_by_dec(r, TextInputType::Bin);
         }
     }
@@ -352,6 +366,18 @@ impl FeelTheBasaApp {
     fn window_key_press(&self, ent_data: &nwg::EventData) {
         match ent_data.on_key() {
             nwg::keys::ESCAPE => self.window.close(),
+            _ => ()
+        }
+    }
+
+    fn window_key_press_on_bin(&self, ent_data: &nwg::EventData) {
+        match ent_data.on_key() {
+            nwg::keys::ESCAPE => self.window.close(),
+            nwg::keys::RETURN => {
+                self.lock.set(true);
+                self.bin_edit.set_text(&partition_bin_to_bytes(&self.bin_edit.text()));
+                self.lock.set(false);
+            }
             _ => ()
         }
     }
