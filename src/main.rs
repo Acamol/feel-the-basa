@@ -22,7 +22,7 @@ pub struct FeelTheBasaApp {
     #[nwg_resource(source_bin: Some(&ICON))]
     icon: nwg::Icon,
 
-    #[nwg_control(size: (350, 200), position: (300, 300), title: "Feel the Basa", icon: Some(&data.icon))]
+    #[nwg_control(size: (400, 200), position: (300, 300), title: &format!("Feel the Basa by Acamol ({})", option_env!("CARGO_PKG_VERSION").unwrap()), icon: Some(&data.icon))]
     #[nwg_events( OnWindowClose: [FeelTheBasaApp::exit], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     window: nwg::Window,
 

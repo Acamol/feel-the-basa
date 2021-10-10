@@ -2,7 +2,11 @@
 name = "feel_the_basa"
 version = "0.1.0"
 edition = "2018"
+authors = ["Aviad Gafni <gaf@duck.com>"]
 
 [dependencies]
 native-windows-derive = "1.0.4"
 native-windows-gui = "1.0.12"
+
+[build-dependencies]
+embed-resource = "1.6.4"
