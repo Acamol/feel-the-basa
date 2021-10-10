@@ -96,12 +96,12 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 7, col: 0, col_span: 1)]
-    #[nwg_events( OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::number_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     ioctl_number_edit: nwg::TextInput,
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 7, col: 1, col_span: 1)]
-    #[nwg_events( OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FeelTheBasaApp::family_change], OnKeyRelease: [FeelTheBasaApp::window_key_press(SELF, EVT_DATA)] )]
     ioctl_family_edit: nwg::TextInput,
 
     #[nwg_control(text: "0")]
@@ -149,6 +149,7 @@ impl FeelTheBasaApp {
         self.bin_edit.set_text(&format!("{:b}", dec));
         self.hex_edit.set_text(&format!("{:X}", dec));
         self.text_edit.set_text(&ip.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+        self.ioctl_number_edit.set_text(&format!("{}", (dec >> FeelTheBasaApp::NRSHIFT) & FeelTheBasaApp::NRMASK));
         self.ioctl_family_edit.set_text(&format!("{}", ((dec >> FeelTheBasaApp::TYPESHIFT) & FeelTheBasaApp::TYPEMASK) as u8 as char));
         self.ioctl_size_edit.set_text(&format!("{}", (dec >> FeelTheBasaApp::SIZESHIFT) & FeelTheBasaApp::SIZEMASK));
         let dir = match (dec >> FeelTheBasaApp::DIRSHIFT) & FeelTheBasaApp::DIRMASK {
@@ -309,7 +310,7 @@ impl FeelTheBasaApp {
             _ => return
         };
         let dirbits = dir_r << FeelTheBasaApp::DIRSHIFT;
-        let mask = u32::MAX >> FeelTheBasaApp::DIRBITS;
+        let mask = !(FeelTheBasaApp::DIRMASK << FeelTheBasaApp::DIRSHIFT);
 
         self.lock.set(true);
         let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | dirbits;
@@ -322,6 +323,56 @@ impl FeelTheBasaApp {
         self.lock.set(false);
     }
     
+    fn number_change(&self) {
+        if self.lock.get() {
+            return;
+        }
+
+        let s = &self.ioctl_number_edit.text();
+        let number = match s.parse::<u32>() {
+            Ok(r @ 0..=255) => r,
+            _ => return
+        };
+        let nrbits = number << FeelTheBasaApp::NRSHIFT;
+        let mask = !(FeelTheBasaApp::NRMASK << FeelTheBasaApp::NRSHIFT);
+
+        self.lock.set(true);
+        let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | nrbits;
+        let x = dec.to_be_bytes();
+        self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[0], x[1], x[2], x[3]));
+        self.dec_edit.set_text(&format!("{}", dec));
+        self.bin_edit.set_text(&format!("{:b}", dec));
+        self.hex_edit.set_text(&format!("{:X}", dec));
+        self.text_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+        self.lock.set(false);
+    }
+
+    fn family_change(&self) {
+        if self.lock.get() {
+            return;
+        }
+
+        let s = &self.ioctl_family_edit.text();
+        if s.len() != 1 {
+            return
+        }
+
+        let b = s.chars().next().unwrap() as u32;
+
+        let typebits = b << FeelTheBasaApp::TYPESHIFT;
+        let mask = !(FeelTheBasaApp::TYPEMASK << FeelTheBasaApp::TYPESHIFT);
+
+        self.lock.set(true);
+        let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | typebits;
+        let x = dec.to_be_bytes();
+        self.ip_edit.set_text(&format!("{}.{}.{}.{}", x[0], x[1], x[2], x[3]));
+        self.dec_edit.set_text(&format!("{}", dec));
+        self.bin_edit.set_text(&format!("{:b}", dec));
+        self.hex_edit.set_text(&format!("{:X}", dec));
+        self.text_edit.set_text(&x.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+        self.lock.set(false);
+    }
+
     fn exit(&self) {
         nwg::stop_thread_dispatch();
     }
