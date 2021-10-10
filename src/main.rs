@@ -31,19 +31,23 @@ pub struct FeelTheBasaApp {
     #[nwg_resource(source_bin: Some(&icon::ICON))]
     icon: nwg::Icon,
 
-    #[nwg_control(size: (400, 200), position: (300, 300), title: &format!("Feel the Basa by Acamol ({})", option_env!("CARGO_PKG_VERSION").unwrap()), icon: Some(&data.icon))]
+    #[nwg_control(size: (445, 225), position: (300, 300), title: &format!("Feel the Basa by Acamol ({})", option_env!("CARGO_PKG_VERSION").unwrap()), icon: Some(&data.icon))]
     #[nwg_events( OnWindowClose: [FtBA::exit], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
     window: nwg::Window,
 
     #[nwg_control(text: "File")]
     window_menu: nwg::Menu,
 
+    #[nwg_control(text: "Signed", parent: window_menu)]
+    #[nwg_events( OnMenuItemSelected: [FtBA::signed_check]) ]
+    signed_menu_item: nwg::MenuItem,
+
     #[nwg_control(text: "About", parent: window_menu)]
-    #[nwg_events( OnMenuItemSelected: [FeelTheBasaApp::about])]
+    #[nwg_events( OnMenuItemSelected: [FtBA::about])]
     about_menu_item: nwg::MenuItem,
 
     #[nwg_control(text: "Close", parent: window_menu)]
-    #[nwg_events( OnMenuItemSelected: [FeelTheBasaApp::exit])]
+    #[nwg_events( OnMenuItemSelected: [FtBA::exit])]
     exit_menu_item: nwg::MenuItem,
 
     #[nwg_layout(parent: window, spacing: 1)]
@@ -171,7 +175,13 @@ impl FeelTheBasaApp {
         let bytes = dec.to_be_bytes();
 
         if tip != TextInputType::Dec {
-            self.dec_edit.set_text(&format!("{}", dec));
+            let msg;
+            if self.signed_menu_item.checked() {
+                msg = format!("{}", dec as i32);
+            } else {
+                msg = format!("{}", dec);
+            }
+            self.dec_edit.set_text(&msg);
         }
 
         if tip != TextInputType::Bin {
@@ -267,14 +277,20 @@ impl FeelTheBasaApp {
             return;
         }
 
-        let s = &self.dec_edit.text();
-        if s.chars().any(|c| c < '0' || c > '9') {
-            return;
-        }
-
-        if let Ok(r) = u32::from_str_radix(s, 10) {
-            self.refresh_value_by_dec(r, TextInputType::Dec);
-        }
+        let s = self.dec_edit.text();
+        let signed = self.signed_menu_item.checked();
+        let dec = if signed {
+            match i32::from_str_radix(&s, 10) {
+                Ok(r) => r as u32,
+                _ => return
+            }
+        } else {
+            match u32::from_str_radix(&s, 10) {
+                Ok(r) => r,
+                _ => return
+            }
+        };
+        self.refresh_value_by_dec(dec, TextInputType::Dec);
     }
 
     fn text_change(&self) {
@@ -375,7 +391,7 @@ impl FeelTheBasaApp {
     }
 
     fn about(&self) {
-        nwg::modal_info_message(&self.window, "Feel the Basa", &format!("{}", "Coded by Acamol, inspired by FeelTheBase.\n\n Reach me at gaf@duck.com."));
+        nwg::modal_info_message(&self.window, "Feel the Basa", &format!("Coded by Acamol, inspired by FeelTheBase.\nReach me at gaf@duck.com.\n\nVersion {}", option_env!("CARGO_PKG_VERSION").unwrap()));
     }
 
     fn window_key_press(&self, ent_data: &nwg::EventData) {
@@ -395,6 +411,24 @@ impl FeelTheBasaApp {
             }
             _ => ()
         }
+    }
+
+    fn signed_check(&self) {
+        let checked = self.signed_menu_item.checked();
+        self.signed_menu_item.set_checked(!checked);
+
+        let dec = if checked {
+            match i32::from_str_radix(&self.dec_edit.text(), 10) {
+                Ok(r) => r as u32,
+                _ => return
+            }
+        } else {
+            match u32::from_str_radix(&self.dec_edit.text(), 10) {
+                Ok(r) => r,
+                _ => return
+            }
+        };
+        self.refresh_value_by_dec(dec, TextInputType::Bin)
     }
 }
 
