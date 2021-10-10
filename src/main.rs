@@ -35,6 +35,17 @@ pub struct FeelTheBasaApp {
     #[nwg_events( OnWindowClose: [FtBA::exit], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
     window: nwg::Window,
 
+    #[nwg_control(text: "File")]
+    window_menu: nwg::Menu,
+
+    #[nwg_control(text: "About", parent: window_menu)]
+    #[nwg_events( OnMenuItemSelected: [FeelTheBasaApp::about])]
+    about_menu_item: nwg::MenuItem,
+
+    #[nwg_control(text: "Close", parent: window_menu)]
+    #[nwg_events( OnMenuItemSelected: [FeelTheBasaApp::exit])]
+    exit_menu_item: nwg::MenuItem,
+
     #[nwg_layout(parent: window, spacing: 1)]
     grid: nwg::GridLayout,
 
@@ -361,6 +372,10 @@ impl FeelTheBasaApp {
 
     fn exit(&self) {
         nwg::stop_thread_dispatch();
+    }
+
+    fn about(&self) {
+        nwg::modal_info_message(&self.window, "Feel the Basa", &format!("{}", "Coded by Acamol, inspired by FeelTheBase.\n\n Reach me at gaf@duck.com."));
     }
 
     fn window_key_press(&self, ent_data: &nwg::EventData) {
