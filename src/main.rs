@@ -214,10 +214,10 @@ impl FeelTheBasaApp {
 
         if tip != TextInputType::IoctlDir {
             let dir = match (dec >> FtBA::DIRSHIFT) & FtBA::DIRMASK {
-                0b0 => "None0",
-                0b1 => "None1",
-                0b10 => "Read",
-                0b11 => "Write",
+                0b0 => "None",
+                0b1 => "Read",
+                0b10 => "Write",
+                0b11 => "Read/Write",
                 _ => "ERROR"
             };
             self.ioctl_dir_edit.set_text(dir);
@@ -319,10 +319,10 @@ impl FeelTheBasaApp {
 
         let s: &str = &self.ioctl_dir_edit.text();
         let dir_r = match &s.to_uppercase()[..] {
-            "NONE0" => 0b0,
-            "NONE1" | "NONE" => 0b1,
-            "READ" => 0b10,
-            "WRITE" => 0b11,
+            "NONE" => 0b0,
+            "READ" => 0b1,
+            "WRITE" => 0b10,
+            "READ/WRITE" | "WRITE/READ" => 0b11,
             _ => return
         };
         let dirbits = dir_r << FtBA::DIRSHIFT;
