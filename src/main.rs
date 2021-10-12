@@ -45,7 +45,7 @@ pub struct FeelTheBasaApp {
     mode_menu: nwg::Menu,
 
     #[nwg_control(text: "Signed", parent: mode_menu)]
-    #[nwg_events( OnMenuItemSelected: [FtBA::signed_check]) ]
+    #[nwg_events( OnMenuItemSelected: [FtBA::on_signed_selected]) ]
     signed_menu_item: nwg::MenuItem,
 
     #[nwg_control(text: "&Help")]
@@ -80,21 +80,21 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 0)]
-    #[nwg_events( OnTextInput: [FtBA::dec_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_dec_change] )]
     dec_edit: nwg::TextInput,
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 1)]
-    #[nwg_events( OnTextInput: [FtBA::hex_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_hex_change] )]
     hex_edit: nwg::TextInput,
 
     #[nwg_control(limit: 4)]
     #[nwg_layout_item(layout: grid, row: 1, col: 2)]
-    #[nwg_events( OnTextInput: [FtBA::text_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_text_change] )]
     text_edit: nwg::TextInput,
 
     #[nwg_control(text: "0.0.0.0", limit: 15)]
-    #[nwg_events( OnTextInput: [FtBA::ip_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_ip_change] )]
     #[nwg_layout_item(layout: grid, row: 1, col: 3)]
     ip_edit: nwg::TextInput,
 
@@ -104,7 +104,7 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 3, col: 0, col_span: 4)]
-    #[nwg_events( OnInit: [FtBA::exit], OnTextInput: [FtBA::bin_change], OnKeyRelease: [FtBA::window_key_press_on_bin(SELF, EVT_DATA)] )]
+    #[nwg_events( OnInit: [FtBA::exit], OnTextInput: [FtBA::on_bin_change], OnKeyRelease: [FtBA::on_bin_key_press(SELF, EVT_DATA)] )]
     bin_edit: nwg::TextInput,
 
     bin_edit_tooltip: Cell<nwg::Tooltip>,
@@ -131,40 +131,25 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0", limit: 3)]
     #[nwg_layout_item(layout: grid, row: 7, col: 0, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::number_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_number_change] )]
     ioctl_number_edit: nwg::TextInput,
 
     #[nwg_control()]
     #[nwg_layout_item(layout: grid, row: 7, col: 1, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::family_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_family_change] )]
     ioctl_family_edit: nwg::TextInput,
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 7, col: 2, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::size_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_size_change] )]
     ioctl_size_edit: nwg::TextInput,
 
     #[nwg_control(text: "None")]
     #[nwg_layout_item(layout: grid, row: 7, col: 3, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::dir_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_dir_change] )]
     ioctl_dir_edit: nwg::TextInput,
 
     lock: Cell<bool>,
-}
-
-fn partition_bin_to_bytes(s: &str) -> String {
-    let mut partitioned = String::with_capacity(s.len());
-    let mut count = 0;
-    let t = s.chars().rev().filter(|&c| c != ' ');
-    for c in t {
-        if count > 0 && count % 8 == 0 {
-            partitioned.push(' ');
-        }
-        partitioned.push(c);
-        count += 1;
-    }
-
-    partitioned.chars().rev().collect()
 }
 
 impl FeelTheBasaApp {
@@ -181,6 +166,21 @@ impl FeelTheBasaApp {
     const SIZESHIFT: u32 = FtBA::TYPEBITS + FtBA::TYPEBITS;
     const DIRSHIFT: u32 = FtBA::SIZESHIFT + FtBA::SIZEBITS;
 
+    fn partition_bin_to_bytes(s: &str) -> String {
+        let mut partitioned = String::with_capacity(s.len());
+        let mut count = 0;
+        let t = s.chars().rev().filter(|&c| c != ' ');
+        for c in t {
+            if count > 0 && count % 8 == 0 {
+                partitioned.push(' ');
+            }
+            partitioned.push(c);
+            count += 1;
+        }
+
+        partitioned.chars().rev().collect()
+    }
+
     fn refresh_value_by_dec(&self, dec: u32, tip: TextInputType) {
         self.lock.set(true);
         let bytes = dec.to_be_bytes();
@@ -196,7 +196,7 @@ impl FeelTheBasaApp {
         }
 
         if tip != TextInputType::Bin {
-            self.bin_edit.set_text(&partition_bin_to_bytes(&format!("{:b}", dec)));
+            self.bin_edit.set_text(&Self::partition_bin_to_bytes(&format!("{:b}", dec)));
         }
 
         if tip != TextInputType::Hex {
@@ -237,7 +237,7 @@ impl FeelTheBasaApp {
         self.lock.set(false);
     }
 
-    fn ip_change(&self) {
+    fn on_ip_change(&self) {
         if self.lock.get() {
             return;
         }
@@ -253,7 +253,7 @@ impl FeelTheBasaApp {
         self.refresh_value_by_dec(dec, TextInputType::IP);
     }
 
-    fn bin_change(&self) {
+    fn on_bin_change(&self) {
         if self.lock.get() {
             return;
         }
@@ -268,7 +268,7 @@ impl FeelTheBasaApp {
         }
     }
 
-    fn hex_change(&self) {
+    fn on_hex_change(&self) {
         if self.lock.get() {
             return;
         }
@@ -283,7 +283,7 @@ impl FeelTheBasaApp {
         }
     }
 
-    fn dec_change(&self) {
+    fn on_dec_change(&self) {
         if self.lock.get() {
             return;
         }
@@ -304,7 +304,7 @@ impl FeelTheBasaApp {
         self.refresh_value_by_dec(dec, TextInputType::Dec);
     }
 
-    fn text_change(&self) {
+    fn on_text_change(&self) {
         if self.lock.get() {
             return;
         }
@@ -323,7 +323,7 @@ impl FeelTheBasaApp {
         self.refresh_value_by_dec(dec, TextInputType::Text);
     }
 
-    fn dir_change(&self) {
+    fn on_dir_change(&self) {
         if self.lock.get() {
             return;
         }
@@ -343,7 +343,7 @@ impl FeelTheBasaApp {
         self.refresh_value_by_dec(dec, TextInputType::IoctlDir);
     }
     
-    fn number_change(&self) {
+    fn on_number_change(&self) {
         if self.lock.get() {
             return;
         }
@@ -360,7 +360,7 @@ impl FeelTheBasaApp {
         self.refresh_value_by_dec(dec, TextInputType::IoctlNumber);
     }
 
-    fn family_change(&self) {
+    fn on_family_change(&self) {
         if self.lock.get() {
             return;
         }
@@ -379,7 +379,7 @@ impl FeelTheBasaApp {
         self.refresh_value_by_dec(dec, TextInputType::IoctlFamily);
     }
 
-    fn size_change(&self) {
+    fn on_size_change(&self) {
         if self.lock.get() {
             return;
         }
@@ -421,11 +421,11 @@ impl FeelTheBasaApp {
         nwg::modal_message(&self.window, &p);
     }
 
-    fn window_key_press_on_bin(&self, ent_data: &nwg::EventData) {
+    fn on_bin_key_press(&self, ent_data: &nwg::EventData) {
         match ent_data.on_key() {
             nwg::keys::RETURN => {
                 self.lock.set(true);
-                self.bin_edit.set_text(&partition_bin_to_bytes(&self.bin_edit.text()));
+                self.bin_edit.set_text(&Self::partition_bin_to_bytes(&self.bin_edit.text()));
                 self.lock.set(false);
             }
             _ => ()
@@ -440,7 +440,7 @@ impl FeelTheBasaApp {
         self.bin_edit_tooltip.set(tt);
     }
 
-    fn signed_check(&self) {
+    fn on_signed_selected(&self) {
         let checked = self.signed_menu_item.checked();
         self.signed_menu_item.set_checked(!checked);
 
