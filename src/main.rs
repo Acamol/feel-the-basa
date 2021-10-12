@@ -27,12 +27,11 @@ type FtBA = FeelTheBasaApp;
 
 #[derive(Default, NwgUi)]
 pub struct FeelTheBasaApp {
-
     #[nwg_resource(source_bin: Some(&icon::ICON))]
     icon: nwg::Icon,
 
     #[nwg_control(size: (445, 225), position: (300, 300), title: &format!("Feel the Basa by Acamol ({})", option_env!("CARGO_PKG_VERSION").unwrap()), icon: Some(&data.icon))]
-    #[nwg_events( OnWindowClose: [FtBA::exit], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnInit: [FtBA::on_window_init], OnWindowClose: [FtBA::exit] )]
     window: nwg::Window,
 
     #[nwg_control(text: "&File")]
@@ -81,21 +80,21 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 0)]
-    #[nwg_events( OnTextInput: [FtBA::dec_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FtBA::dec_change] )]
     dec_edit: nwg::TextInput,
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 1, col: 1)]
-    #[nwg_events( OnTextInput: [FtBA::hex_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FtBA::hex_change] )]
     hex_edit: nwg::TextInput,
 
     #[nwg_control(limit: 4)]
     #[nwg_layout_item(layout: grid, row: 1, col: 2)]
-    #[nwg_events( OnTextInput: [FtBA::text_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FtBA::text_change] )]
     text_edit: nwg::TextInput,
 
     #[nwg_control(text: "0.0.0.0", limit: 15)]
-    #[nwg_events( OnTextInput: [FtBA::ip_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FtBA::ip_change] )]
     #[nwg_layout_item(layout: grid, row: 1, col: 3)]
     ip_edit: nwg::TextInput,
 
@@ -105,8 +104,10 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 3, col: 0, col_span: 4)]
-    #[nwg_events( OnTextInput: [FtBA::bin_change], OnKeyRelease: [FtBA::window_key_press_on_bin(SELF, EVT_DATA)] )]
+    #[nwg_events( OnInit: [FtBA::exit], OnTextInput: [FtBA::bin_change], OnKeyRelease: [FtBA::window_key_press_on_bin(SELF, EVT_DATA)] )]
     bin_edit: nwg::TextInput,
+
+    bin_edit_tooltip: Cell<nwg::Tooltip>,
 
     #[nwg_control(text: "IOCTL", h_align: nwg::HTextAlign::Center)]
     #[nwg_layout_item(layout: grid, row: 5, col: 0, col_span: 4)]
@@ -130,22 +131,22 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0", limit: 3)]
     #[nwg_layout_item(layout: grid, row: 7, col: 0, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::number_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FtBA::number_change] )]
     ioctl_number_edit: nwg::TextInput,
 
     #[nwg_control()]
     #[nwg_layout_item(layout: grid, row: 7, col: 1, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::family_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FtBA::family_change] )]
     ioctl_family_edit: nwg::TextInput,
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 7, col: 2, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::size_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FtBA::size_change] )]
     ioctl_size_edit: nwg::TextInput,
 
     #[nwg_control(text: "None")]
     #[nwg_layout_item(layout: grid, row: 7, col: 3, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::dir_change], OnKeyRelease: [FtBA::window_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnTextInput: [FtBA::dir_change] )]
     ioctl_dir_edit: nwg::TextInput,
 
     lock: Cell<bool>,
@@ -413,23 +414,15 @@ impl FeelTheBasaApp {
     fn on_hotkeys(&self) {
         let p = nwg::MessageParams {
             title: "Hotkeys",
-            content: "Esc: exit\nEnter (Bin only): partition the input to bytes",
+            content: "Enter (Bin only): partition the input to bytes\nAlt + f: open File menu\nAlt + m: open Mode menu\nAlt + h: open Help menu",
             buttons: nwg::MessageButtons::Ok,
             icons: nwg::MessageIcons::None
         };
         nwg::modal_message(&self.window, &p);
     }
 
-    fn window_key_press(&self, ent_data: &nwg::EventData) {
-        match ent_data.on_key() {
-            nwg::keys::ESCAPE => self.window.close(),
-            _ => ()
-        }
-    }
-
     fn window_key_press_on_bin(&self, ent_data: &nwg::EventData) {
         match ent_data.on_key() {
-            nwg::keys::ESCAPE => self.window.close(),
             nwg::keys::RETURN => {
                 self.lock.set(true);
                 self.bin_edit.set_text(&partition_bin_to_bytes(&self.bin_edit.text()));
@@ -437,6 +430,14 @@ impl FeelTheBasaApp {
             }
             _ => ()
         }
+    }
+
+    fn on_window_init(&self) {
+        let mut tt = nwg::Tooltip::default();
+        nwg::Tooltip::builder()
+        .register(&self.bin_edit, "Press Enter to split into bytes")
+        .build(&mut tt).expect("oops");
+        self.bin_edit_tooltip.set(tt);
     }
 
     fn signed_check(&self) {

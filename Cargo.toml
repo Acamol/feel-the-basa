@@ -1,6 +1,6 @@
 [package]
 name = "feel_the_basa"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
 authors = ["Aviad Gafni <gaf@duck.com>"]
 
