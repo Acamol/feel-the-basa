@@ -172,17 +172,20 @@ impl FeelTheBasaApp {
 
     fn partition_bin_to_bytes(s: &str) -> String {
         let mut partitioned = String::with_capacity(s.len());
-        let mut count = 0;
-        let t = s.chars().rev().filter(|&c| c != ' ');
-        for c in t {
-            if count > 0 && count % 8 == 0 {
-                partitioned.push(' ');
-            }
-            partitioned.push(c);
-            count += 1;
+        let mut filtered_s = s.chars()
+            .filter(|&c| c != ' ')
+            .skip_while(|&c| c == '0')
+            .peekable();
+        let len = filtered_s.clone().count();
+        let first_chunk_size = if len % 8 == 0 {8} else {len % 8};
+        let it = filtered_s.by_ref();
+        partitioned.extend(it.take(first_chunk_size));
+        while it.peek().is_some() {
+            partitioned.push(' ');
+            partitioned.extend(it.take(8));
         }
 
-        partitioned.chars().rev().collect()
+        partitioned
     }
 
     fn refresh_value_by_dec(&self, dec: u32, tip: TextInputType) {
