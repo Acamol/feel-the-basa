@@ -1,5 +1,8 @@
 #![windows_subsystem = "windows"]
 
+mod icon;
+mod nwg_extension;
+
 use native_windows_gui as nwg;
 use native_windows_derive as nwd;
 use nwd::NwgUi;
@@ -7,7 +10,7 @@ use nwg::NativeUi;
 use std::cell::Cell;
 use std::collections::VecDeque;
 
-mod icon;
+use nwg_extension::tooltip::OneArgRegister;
 
 
 #[derive(PartialEq)]
@@ -31,7 +34,7 @@ pub struct FeelTheBasaApp {
     icon: nwg::Icon,
 
     #[nwg_control(size: (445, 225), position: (300, 300), title: &format!("Feel the Basa by Acamol ({})", option_env!("CARGO_PKG_VERSION").unwrap()), icon: Some(&data.icon))]
-    #[nwg_events( OnInit: [FtBA::on_window_init], OnWindowClose: [FtBA::exit] )]
+    #[nwg_events( OnWindowClose: [FtBA::exit] )]
     window: nwg::Window,
 
     #[nwg_control(text: "&File")]
@@ -107,7 +110,8 @@ pub struct FeelTheBasaApp {
     #[nwg_events( OnInit: [FtBA::exit], OnTextInput: [FtBA::on_bin_change], OnKeyRelease: [FtBA::on_bin_key_press(SELF, EVT_DATA)] )]
     bin_edit: nwg::TextInput,
 
-    bin_edit_tooltip: Cell<nwg::Tooltip>,
+    #[nwg_control(one_arg_register: (&data.bin_edit, "Press Enter to split into bytes"))]
+    bin_edit_tooltip: nwg::Tooltip,
 
     #[nwg_control(text: "IOCTL", h_align: nwg::HTextAlign::Center)]
     #[nwg_layout_item(layout: grid, row: 5, col: 0, col_span: 4)]
@@ -430,14 +434,6 @@ impl FeelTheBasaApp {
             }
             _ => ()
         }
-    }
-
-    fn on_window_init(&self) {
-        let mut tt = nwg::Tooltip::default();
-        nwg::Tooltip::builder()
-        .register(&self.bin_edit, "Press Enter to split into bytes")
-        .build(&mut tt).expect("oops");
-        self.bin_edit_tooltip.set(tt);
     }
 
     fn on_signed_selected(&self) {
