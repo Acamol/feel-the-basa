@@ -17,7 +17,7 @@ fn main() -> std::io::Result<()> {
                 BLOCK \"040904b0\"
                 {{
                     VALUE \"CompanyName\", \"{}\"
-                    VALUE \"FileDescription\", \"Bits calculator\"
+                    VALUE \"FileDescription\", \"FeelTheBasa\"
                     VALUE \"FileVersion\", \"{}\"
                     VALUE \"InternalName\", \"feel_the_basa\"
                     VALUE \"LegalCopyright\", \"Copyright 2021 Acamol. All rights reserved.\"
