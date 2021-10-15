@@ -16,14 +16,14 @@ fn main() -> std::io::Result<()> {
             {{
                 BLOCK \"040904b0\"
                 {{
-                    VALUE \"CompanyName\", \"{}\"
+                    VALUE \"CompanyName\", \"{authors}\"
                     VALUE \"FileDescription\", \"FeelTheBasa\"
-                    VALUE \"FileVersion\", \"{}\"
+                    VALUE \"FileVersion\", \"{version}\"
                     VALUE \"InternalName\", \"feel_the_basa\"
                     VALUE \"LegalCopyright\", \"Copyright 2021 Acamol. All rights reserved.\"
                     VALUE \"ProductName\", \"FeelTheBasa\"
                     VALUE \"OriginalFilename\", \"feel_the_basa.exe\"
-                    VALUE \"ProductVersion\", \"{}\"
+                    VALUE \"ProductVersion\", \"{version}\"
                     VALUE \"CompanyShortName\", \"Acamol\"
                     VALUE \"ProductShortName\", \"FeelTheBasa\"
                 }}
@@ -34,7 +34,7 @@ fn main() -> std::io::Result<()> {
                 VALUE \"Translation\", 0x0409 0x04B0
             }}
         }}",
-        version.replace(".", ","), authors, version, version);
+        version.replace(".", ","), authors = authors, version = version);
 
     write!(version_file, "{}", version_with_args)?;
     embed_resource::compile("resource/icon.rc");
