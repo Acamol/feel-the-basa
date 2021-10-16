@@ -2,15 +2,19 @@
 
 mod icon;
 mod nwg_extension;
+mod bytes;
 
 use native_windows_gui as nwg;
 use native_windows_derive as nwd;
 use nwd::NwgUi;
 use nwg::NativeUi;
 use std::cell::Cell;
-use std::collections::VecDeque;
 
 use nwg_extension::tooltip::OneArgRegister;
+use bytes::{To32Bit as _, To128Bit as _};
+use bytes::_128bit::{ParseTo128Bit as _, ToU128 as _, ToStr as _, ToBinStr as _};
+use bytes::_32bit::{ToU32 as _};
+use bytes::BitWidth as BitWidth;
 
 
 #[derive(PartialEq)]
@@ -24,7 +28,9 @@ enum TextInputType {
     IoctlNumber,
     IoctlDir,
     IoctlSize,
+    None,
 }
+
 
 type FtBA = FeelTheBasaApp;
 
@@ -33,7 +39,7 @@ pub struct FeelTheBasaApp {
     #[nwg_resource(source_bin: Some(&icon::ICON))]
     icon: nwg::Icon,
 
-    #[nwg_control(size: (445, 225), position: (300, 300), title: &format!("Feel the Basa by Acamol ({})", option_env!("CARGO_PKG_VERSION").unwrap()), icon: Some(&data.icon))]
+    #[nwg_control(size: (445, 225), position: (300, 300), title: &format!("Feel the Basa v{}", option_env!("CARGO_PKG_VERSION").unwrap()), icon: Some(&data.icon))]
     #[nwg_events( OnWindowClose: [FtBA::exit] )]
     window: nwg::Window,
 
@@ -50,6 +56,21 @@ pub struct FeelTheBasaApp {
     #[nwg_control(text: "Signed", parent: mode_menu)]
     #[nwg_events( OnMenuItemSelected: [FtBA::on_signed_selected]) ]
     signed_menu_item: nwg::MenuItem,
+
+    #[nwg_control(parent: mode_menu)]
+    separator: nwg::MenuSeparator,
+
+    #[nwg_control(text: "32-bit", parent: mode_menu, check: true)]
+    #[nwg_events( OnMenuItemSelected: [FtBA::on_32bit_selected]) ]
+    _32bit_menu_item: nwg::MenuItem,
+
+    #[nwg_control(text: "64-bit", parent: mode_menu)]
+    #[nwg_events( OnMenuItemSelected: [FtBA::on_64bit_selected]) ]
+    _64bit_menu_item: nwg::MenuItem,
+
+    #[nwg_control(text: "128-bit", parent: mode_menu)]
+    #[nwg_events( OnMenuItemSelected: [FtBA::on_128bit_selected]) ]
+    _128bit_menu_item: nwg::MenuItem,
 
     #[nwg_control(text: "&Help")]
     help_menu: nwg::Menu,
@@ -86,7 +107,7 @@ pub struct FeelTheBasaApp {
     #[nwg_events( OnTextInput: [FtBA::on_dec_change] )]
     dec_edit: nwg::TextInput,
 
-    #[nwg_control(text: "0")]
+    #[nwg_control(text: "0", limit: 8)]
     #[nwg_layout_item(layout: grid, row: 1, col: 1)]
     #[nwg_events( OnTextInput: [FtBA::on_hex_change] )]
     hex_edit: nwg::TextInput,
@@ -154,6 +175,7 @@ pub struct FeelTheBasaApp {
     ioctl_dir_edit: nwg::TextInput,
 
     lock: Cell<bool>,
+    bit_width: Cell<BitWidth>,
 }
 
 impl FeelTheBasaApp {
@@ -188,50 +210,50 @@ impl FeelTheBasaApp {
         partitioned
     }
 
-    fn refresh_value_by_dec(&self, dec: u32, tip: TextInputType) {
+    fn refresh_value_by_dec(&self, dec: &[u8; 16], tip: TextInputType) {
         self.lock.set(true);
-        let bytes = dec.to_be_bytes();
+        let bw = self.bit_width.get();
 
         if tip != TextInputType::Dec {
-            let msg;
-            if self.signed_menu_item.checked() {
-                msg = format!("{}", dec as i32);
-            } else {
-                msg = format!("{}", dec);
-            }
-            self.dec_edit.set_text(&msg);
+            self.dec_edit.set_text(&dec.to_str(self.signed_menu_item.checked(), bw));
         }
 
         if tip != TextInputType::Bin {
-            self.bin_edit.set_text(&Self::partition_bin_to_bytes(&format!("{:b}", dec)));
+            self.bin_edit.set_text(&Self::partition_bin_to_bytes(&dec.to_bin_str(bw)));
         }
 
         if tip != TextInputType::Hex {
-            self.hex_edit.set_text(&format!("{:X}", dec));
+            self.hex_edit.set_text(&format!("{:X}", dec.to_u128()));
         }
 
         if tip != TextInputType::Text {
-            self.text_edit.set_text(&bytes.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+            self.text_edit.set_text(&dec.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
         }
 
         if tip != TextInputType::IP {
-            self.ip_edit.set_text(&format!("{}.{}.{}.{}", bytes[0], bytes[1], bytes[2], bytes[3]));
+            match bw {
+                BitWidth::_32BIT => {
+                    let mut it = dec.iter().take(4).rev();
+                    self.ip_edit.set_text(&format!("{}.{}.{}.{}", it.next().unwrap(), it.next().unwrap(), it.next().unwrap(), it.next().unwrap()));
+                },
+                _ => (),// TODO
+            }
         }
 
-        if tip != TextInputType::IoctlNumber {
-            self.ioctl_number_edit.set_text(&format!("{}", (dec >> FtBA::NRSHIFT) & FtBA::NRMASK));
+        if bw == BitWidth::_32BIT && tip != TextInputType::IoctlNumber {
+            self.ioctl_number_edit.set_text(&format!("{}", (dec.to_32_bit().to_u32() >> FtBA::NRSHIFT) & FtBA::NRMASK));
         }
 
-        if tip != TextInputType::IoctlFamily {
-            self.ioctl_family_edit.set_text(&format!("{}", ((dec >> FtBA::TYPESHIFT) & FtBA::TYPEMASK) as u8 as char));
+        if bw == BitWidth::_32BIT && tip != TextInputType::IoctlFamily {
+            self.ioctl_family_edit.set_text(&format!("{}", ((dec.to_32_bit().to_u32() >> FtBA::TYPESHIFT) & FtBA::TYPEMASK) as u8 as char));
         }
         
-        if tip != TextInputType::IoctlSize {
-            self.ioctl_size_edit.set_text(&format!("{}", (dec >> FtBA::SIZESHIFT) & FtBA::SIZEMASK));
+        if bw == BitWidth::_32BIT && tip != TextInputType::IoctlSize {
+            self.ioctl_size_edit.set_text(&format!("{}", (dec.to_32_bit().to_u32() >> FtBA::SIZESHIFT) & FtBA::SIZEMASK));
         }
 
-        if tip != TextInputType::IoctlDir {
-            let dir = match (dec >> FtBA::DIRSHIFT) & FtBA::DIRMASK {
+        if bw == BitWidth::_32BIT && tip != TextInputType::IoctlDir {
+            let dir = match (dec.to_32_bit().to_u32() >> FtBA::DIRSHIFT) & FtBA::DIRMASK {
                 0b0 => "None",
                 0b1 => "Read",
                 0b10 => "Write",
@@ -249,6 +271,10 @@ impl FeelTheBasaApp {
             return;
         }
 
+        if self.bit_width.get() != BitWidth::_32BIT {
+            return;
+        }
+
         let to = self.ip_edit.text();
         let t: Vec<&str> = to.split(".").collect();
         if t.len() != 4 || t.iter().any(|x| x.is_empty() || x.chars().any(|y| !y.is_numeric()) || x.parse::<i32>().unwrap() > 255) {
@@ -257,7 +283,7 @@ impl FeelTheBasaApp {
 
         let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
         let dec = u32::from_ne_bytes(ip);
-        self.refresh_value_by_dec(dec, TextInputType::IP);
+        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IP);
     }
 
     fn on_bin_change(&self) {
@@ -270,8 +296,8 @@ impl FeelTheBasaApp {
             return;
         }
 
-        if let Ok(r) = u32::from_str_radix(&bin_str, 2) {
-            self.refresh_value_by_dec(r, TextInputType::Bin);
+        if let Ok(r) = u128::from_str_radix(&bin_str, 2) {
+            self.refresh_value_by_dec(&r.to_ne_bytes(), TextInputType::Bin);
         }
     }
 
@@ -285,8 +311,8 @@ impl FeelTheBasaApp {
             return;
         }
 
-        if let Ok(r) = u32::from_str_radix(s, 16) {
-            self.refresh_value_by_dec(r, TextInputType::Hex);
+        if let Ok(r) = u128::from_str_radix(s, 16) {
+            self.refresh_value_by_dec(&r.to_ne_bytes(), TextInputType::Hex);
         }
     }
 
@@ -297,18 +323,9 @@ impl FeelTheBasaApp {
 
         let s = self.dec_edit.text();
         let signed = self.signed_menu_item.checked();
-        let dec = if signed {
-            match i32::from_str_radix(&s, 10) {
-                Ok(r) => r as u32,
-                _ => return
-            }
-        } else {
-            match u32::from_str_radix(&s, 10) {
-                Ok(r) => r,
-                _ => return
-            }
+        if let Ok(bytes) = s.as_str().parse_to_128bit(signed, self.bit_width.get()) {
+            self.refresh_value_by_dec(&bytes, TextInputType::Dec);
         };
-        self.refresh_value_by_dec(dec, TextInputType::Dec);
     }
 
     fn on_text_change(&self) {
@@ -317,21 +334,25 @@ impl FeelTheBasaApp {
         }
 
         let s = &self.text_edit.text();
-        if s.len() > 4 {
+        if s.len() == 0 {
             return;
         }
 
-        let mut bytes = s.bytes().collect::<VecDeque<_>>();
-        while bytes.len() < 4 {
-            bytes.push_front(0u8)
+        if s.len() > self.bit_width.get().to_num_bytes() {
+            return;
         }
-        let b = [bytes[3], bytes[2], bytes[1], bytes[0]];
-        let dec = u32::from_ne_bytes(b);
-        self.refresh_value_by_dec(dec, TextInputType::Text);
+
+        let mut bytes = [0u8; 16];
+        s.bytes().rev().enumerate().for_each(|(i, b)| bytes[i] = b);
+        self.refresh_value_by_dec(&bytes, TextInputType::Text);
     }
 
     fn on_dir_change(&self) {
         if self.lock.get() {
+            return;
+        }
+
+        if self.bit_width.get() != BitWidth::_32BIT {
             return;
         }
 
@@ -347,11 +368,15 @@ impl FeelTheBasaApp {
         let mask = !(FtBA::DIRMASK << FtBA::DIRSHIFT);
 
         let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | dirbits;
-        self.refresh_value_by_dec(dec, TextInputType::IoctlDir);
+        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IoctlDir);
     }
     
     fn on_number_change(&self) {
         if self.lock.get() {
+            return;
+        }
+
+        if self.bit_width.get() != BitWidth::_32BIT {
             return;
         }
 
@@ -364,11 +389,15 @@ impl FeelTheBasaApp {
         let mask = !(FtBA::NRMASK << FtBA::NRSHIFT);
 
         let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | nrbits;
-        self.refresh_value_by_dec(dec, TextInputType::IoctlNumber);
+        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IoctlNumber);
     }
 
     fn on_family_change(&self) {
         if self.lock.get() {
+            return;
+        }
+
+        if self.bit_width.get() != BitWidth::_32BIT {
             return;
         }
 
@@ -383,11 +412,15 @@ impl FeelTheBasaApp {
         let mask = !(FtBA::TYPEMASK << FtBA::TYPESHIFT);
 
         let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | typebits;
-        self.refresh_value_by_dec(dec, TextInputType::IoctlFamily);
+        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IoctlFamily);
     }
 
     fn on_size_change(&self) {
         if self.lock.get() {
+            return;
+        }
+
+        if self.bit_width.get() != BitWidth::_32BIT {
             return;
         }
 
@@ -401,7 +434,7 @@ impl FeelTheBasaApp {
         let mask = !(FtBA::SIZEMASK << FtBA::SIZESHIFT);
 
         let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | sizebits;
-        self.refresh_value_by_dec(dec, TextInputType::IoctlSize);
+        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IoctlSize);
     }
 
     fn exit(&self) {
@@ -440,21 +473,65 @@ impl FeelTheBasaApp {
     }
 
     fn on_signed_selected(&self) {
-        let checked = self.signed_menu_item.checked();
-        self.signed_menu_item.set_checked(!checked);
+        let bit_width = self.bit_width.get();
+        let was_signed = self.signed_menu_item.checked();
+        let dec_text = self.dec_edit.text();
+        self.signed_menu_item.set_checked(!was_signed);
+        if let Ok(bytes) = dec_text.as_str().parse_to_128bit(!was_signed, bit_width) {
+            self.refresh_value_by_dec(&bytes, TextInputType::Bin)
+        }
+    }
 
-        let dec = if checked {
-            match i32::from_str_radix(&self.dec_edit.text(), 10) {
-                Ok(r) => r as u32,
-                _ => return
+    fn bit_menu_check_only_one(&self, bits: BitWidth) {
+        self._32bit_menu_item.set_checked(false);
+        self._64bit_menu_item.set_checked(false);
+        self._128bit_menu_item.set_checked(false);
+        self.ip_edit.set_readonly(true);
+        match bits {
+            BitWidth::_32BIT => {
+                self._32bit_menu_item.set_checked(true);
+                self.ip_edit.set_readonly(false);
+            },
+            BitWidth::_64BIT => {
+                self._64bit_menu_item.set_checked(true);
             }
-        } else {
-            match u32::from_str_radix(&self.dec_edit.text(), 10) {
-                Ok(r) => r,
-                _ => return
+            BitWidth::_128BIT => {
+                self._128bit_menu_item.set_checked(true);
             }
         };
-        self.refresh_value_by_dec(dec, TextInputType::Bin)
+
+        self.hex_edit.set_limit(bits.to_num_bytes() * 2);
+        self.text_edit.set_limit(bits.to_num_bytes());
+    }
+
+    fn on_32bit_selected(&self) {
+        self.bit_menu_check_only_one(BitWidth::_32BIT);
+        self.bit_width.set(BitWidth::_32BIT);
+        let signed = self.signed_menu_item.checked();
+        let dec_str = self.dec_edit.text();
+        if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::_32BIT) {
+            self.refresh_value_by_dec(&bytes, TextInputType::None);
+        }
+    }
+
+    fn on_64bit_selected(&self) {
+        self.bit_menu_check_only_one(BitWidth::_64BIT);
+        self.bit_width.set(BitWidth::_64BIT);
+        let signed = self.signed_menu_item.checked();
+        let dec_str = self.dec_edit.text();
+        if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::_64BIT) {
+            self.refresh_value_by_dec(&bytes, TextInputType::None);
+        }
+    }
+
+    fn on_128bit_selected(&self) {
+        self.bit_menu_check_only_one(BitWidth::_128BIT);
+        self.bit_width.set(BitWidth::_128BIT);
+        let signed = self.signed_menu_item.checked();
+        let dec_str = self.dec_edit.text();
+        if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::_128BIT) {
+            self.refresh_value_by_dec(&bytes, TextInputType::None);
+        }
     }
 }
 

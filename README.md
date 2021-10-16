@@ -19,6 +19,6 @@ cargo build --release
 
 TODO
 ---
-* Support 64-bit and 128-bit data.
+* ~~Support 64-bit and 128-bit data.~~
 * Use IPv6 address when 128-bit data is used.
 * Support 3-bit IOCTL access mode.
