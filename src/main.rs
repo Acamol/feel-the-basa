@@ -236,7 +236,15 @@ impl FeelTheBasaApp {
                     let mut it = dec.iter().take(4).rev();
                     self.ip_edit.set_text(&format!("{}.{}.{}.{}", it.next().unwrap(), it.next().unwrap(), it.next().unwrap(), it.next().unwrap()));
                 },
-                _ => (),// TODO
+                BitWidth::_128BIT => {
+                        let mut s = String::with_capacity(39);
+                        for i in (0..dec.len()).rev().step_by(2) {
+                            let m = [dec[i-1], dec[i]];
+                            s.push_str(&format!("{:X}:", u16::from_ne_bytes(m)));
+                        }
+                        self.ip_edit.set_text(&s[..s.len()-1]);
+                },
+                _ => (),
             }
         }
 
@@ -266,24 +274,53 @@ impl FeelTheBasaApp {
         self.lock.set(false);
     }
 
-    fn on_ip_change(&self) {
+    fn on_ip_change_bw(&self, bw: BitWidth) {
+        let s = self.ip_edit.text();
         if self.lock.get() {
             return;
         }
 
-        if self.bit_width.get() != BitWidth::_32BIT {
-            return;
-        }
+        let dec = match bw {
+            BitWidth::_32BIT => {
+                let t: Vec<&str> = s.split(".").collect();
+                if t.len() != 4 || t.iter().any(|x| x.is_empty() || x.chars().any(|y| !y.is_numeric()) || x.parse::<i32>().unwrap() > 255) {
+                    return;
+                }
 
-        let to = self.ip_edit.text();
-        let t: Vec<&str> = to.split(".").collect();
-        if t.len() != 4 || t.iter().any(|x| x.is_empty() || x.chars().any(|y| !y.is_numeric()) || x.parse::<i32>().unwrap() > 255) {
-            return;
-        }
+                let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
+                u32::from_ne_bytes(ip).to_128_bit()
+            }
+            BitWidth::_64BIT =>
+                return,
+            BitWidth::_128BIT => {
+                self.lock.set(true);
+                let t: Vec<_> = s.split(":").collect();
+                if t.len() != 8 || t.iter().any(|x| x.is_empty() || x.len() > 4 || x.chars().any(|c| match c {
+                    '0'..='9' | 'a'..='f' | 'A'..='F' => false,
+                    _ => true
+                })) {
+                    self.bin_edit.set_text("invaild ip");
+                    self.lock.set(false);
+                    return;
+                }
 
-        let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
-        let dec = u32::from_ne_bytes(ip);
-        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IP);
+                let mut i = 0;
+                let mut ip = [0u8; 16];
+                for s in t.iter().rev() {
+                    let padded = format!("{:0>4}", s);
+                    ip[i+1] = u8::from_str_radix(&padded[0..2], 16).unwrap();
+                    ip[i] = u8::from_str_radix(&padded[2..4], 16).unwrap(); 
+                    i += 2;
+                }
+                ip
+            }
+        };
+
+        self.refresh_value_by_dec(&dec, TextInputType::IP);
+    }
+
+    fn on_ip_change(&self) {
+        self.on_ip_change_bw(self.bit_width.get())
     }
 
     fn on_bin_change(&self) {
@@ -487,16 +524,28 @@ impl FeelTheBasaApp {
         self._64bit_menu_item.set_checked(false);
         self._128bit_menu_item.set_checked(false);
         self.ip_edit.set_readonly(true);
+        self.ioctl_dir_edit.set_readonly(true);
+        self.ioctl_family_edit.set_readonly(true);
+        self.ioctl_number_edit.set_readonly(true);
+        self.ioctl_size_edit.set_readonly(true);
+        self.ioctl_size_edit.set_limit(15);
+
         match bits {
             BitWidth::_32BIT => {
                 self._32bit_menu_item.set_checked(true);
                 self.ip_edit.set_readonly(false);
+                self.ioctl_dir_edit.set_readonly(false);
+                self.ioctl_family_edit.set_readonly(false);
+                self.ioctl_number_edit.set_readonly(false);
+                self.ioctl_size_edit.set_readonly(false);
             },
             BitWidth::_64BIT => {
                 self._64bit_menu_item.set_checked(true);
             }
             BitWidth::_128BIT => {
                 self._128bit_menu_item.set_checked(true);
+                self.ip_edit.set_readonly(false);
+                self.ip_edit.set_limit(39);
             }
         };
 
