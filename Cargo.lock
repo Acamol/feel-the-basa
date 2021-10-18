@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "feel_the_basa"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "embed-resource",
  "native-windows-derive",
