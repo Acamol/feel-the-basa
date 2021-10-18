@@ -11,9 +11,8 @@ use nwg::NativeUi;
 use std::cell::Cell;
 
 use nwg_extension::tooltip::OneArgRegister;
-use bytes::{To32Bit as _, To128Bit as _};
-use bytes::_128bit::{ParseTo128Bit as _, ToU128 as _, ToStr as _, ToBinStr as _};
-use bytes::_32bit::{ToU32 as _};
+use bytes::Int32or64or128;
+use bytes::_128bit::{ParseTo128Bit as _, ToStr as _, ToBinStr as _};
 use bytes::BitWidth as BitWidth;
 
 
@@ -30,7 +29,6 @@ enum TextInputType {
     IoctlSize,
     None,
 }
-
 
 type FtBA = FeelTheBasaApp;
 
@@ -211,8 +209,15 @@ impl FeelTheBasaApp {
     }
 
     fn refresh_value_by_dec(&self, dec: &[u8; 16], tip: TextInputType) {
+        union Int32or64or128 {
+            _u32: u32,
+            _u64: u64,
+            _u128: u128
+        }
+
         self.lock.set(true);
         let bw = self.bit_width.get();
+        let u = Int32or64or128 { _u128: u128::from_ne_bytes(*dec) };
 
         if tip != TextInputType::Dec {
             self.dec_edit.set_text(&dec.to_str(self.signed_menu_item.checked(), bw));
@@ -223,11 +228,24 @@ impl FeelTheBasaApp {
         }
 
         if tip != TextInputType::Hex {
-            self.hex_edit.set_text(&format!("{:X}", dec.to_u128()));
+            let hex = match bw {
+                BitWidth::_32BIT =>
+                    format!("{:X}", unsafe { u._u32 }),
+                BitWidth::_64BIT =>
+                    format!("{:X}", unsafe { u._u64 }),
+                BitWidth::_128BIT =>
+                    format!("{:X}", unsafe { u._u128 }),
+            };
+            self.hex_edit.set_text(&hex);
         }
 
         if tip != TextInputType::Text {
-            self.text_edit.set_text(&dec.iter().filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+            let iter = match bw {
+                BitWidth::_32BIT => dec.iter().take(4),
+                BitWidth::_64BIT => dec.iter().take(8),
+                BitWidth::_128BIT => dec.iter().take(16)
+            };
+            self.text_edit.set_text(&iter.filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
         }
 
         if tip != TextInputType::IP {
@@ -249,19 +267,19 @@ impl FeelTheBasaApp {
         }
 
         if bw == BitWidth::_32BIT && tip != TextInputType::IoctlNumber {
-            self.ioctl_number_edit.set_text(&format!("{}", (dec.to_32_bit().to_u32() >> FtBA::NRSHIFT) & FtBA::NRMASK));
+            self.ioctl_number_edit.set_text(&format!("{}", (unsafe { u._u32 } >> FtBA::NRSHIFT) & FtBA::NRMASK));
         }
 
         if bw == BitWidth::_32BIT && tip != TextInputType::IoctlFamily {
-            self.ioctl_family_edit.set_text(&format!("{}", ((dec.to_32_bit().to_u32() >> FtBA::TYPESHIFT) & FtBA::TYPEMASK) as u8 as char));
+            self.ioctl_family_edit.set_text(&format!("{}", ((unsafe { u._u32 } >> FtBA::TYPESHIFT) & FtBA::TYPEMASK) as u8 as char));
         }
         
         if bw == BitWidth::_32BIT && tip != TextInputType::IoctlSize {
-            self.ioctl_size_edit.set_text(&format!("{}", (dec.to_32_bit().to_u32() >> FtBA::SIZESHIFT) & FtBA::SIZEMASK));
+            self.ioctl_size_edit.set_text(&format!("{}", (unsafe { u._u32 } >> FtBA::SIZESHIFT) & FtBA::SIZEMASK));
         }
 
         if bw == BitWidth::_32BIT && tip != TextInputType::IoctlDir {
-            let dir = match (dec.to_32_bit().to_u32() >> FtBA::DIRSHIFT) & FtBA::DIRMASK {
+            let dir = match (unsafe { u._u32 } >> FtBA::DIRSHIFT) & FtBA::DIRMASK {
                 0b0 => "None",
                 0b1 => "Read",
                 0b10 => "Write",
@@ -288,7 +306,9 @@ impl FeelTheBasaApp {
                 }
 
                 let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
-                u32::from_ne_bytes(ip).to_128_bit()
+                let mut u = Int32or64or128 { _u128: 0 };
+                u._u32 = u32::from_ne_bytes(ip);
+                unsafe { u._u128.to_ne_bytes() }
             }
             BitWidth::_64BIT =>
                 return,
@@ -405,7 +425,9 @@ impl FeelTheBasaApp {
         let mask = !(FtBA::DIRMASK << FtBA::DIRSHIFT);
 
         let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | dirbits;
-        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IoctlDir);
+        let mut u = Int32or64or128 { _u128: 0 };
+        u._u32 = dec;
+        self.refresh_value_by_dec(&unsafe {u._u128.to_ne_bytes()}, TextInputType::IoctlDir);
     }
     
     fn on_number_change(&self) {
@@ -426,7 +448,9 @@ impl FeelTheBasaApp {
         let mask = !(FtBA::NRMASK << FtBA::NRSHIFT);
 
         let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | nrbits;
-        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IoctlNumber);
+        let mut u = Int32or64or128 { _u128: 0 };
+        u._u32 = dec;
+        self.refresh_value_by_dec(&unsafe {u._u128.to_ne_bytes()}, TextInputType::IoctlNumber);
     }
 
     fn on_family_change(&self) {
@@ -449,7 +473,9 @@ impl FeelTheBasaApp {
         let mask = !(FtBA::TYPEMASK << FtBA::TYPESHIFT);
 
         let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | typebits;
-        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IoctlFamily);
+        let mut u = Int32or64or128 { _u128: 0 };
+        u._u32 = dec;
+        self.refresh_value_by_dec(&unsafe { u._u128.to_ne_bytes() }, TextInputType::IoctlFamily);
     }
 
     fn on_size_change(&self) {
@@ -471,7 +497,9 @@ impl FeelTheBasaApp {
         let mask = !(FtBA::SIZEMASK << FtBA::SIZESHIFT);
 
         let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | sizebits;
-        self.refresh_value_by_dec(&dec.to_128_bit(), TextInputType::IoctlSize);
+        let mut u = Int32or64or128 { _u128: 0 };
+        u._u32 = dec;
+        self.refresh_value_by_dec(&unsafe { u._u128.to_ne_bytes() }, TextInputType::IoctlSize);
     }
 
     fn exit(&self) {
@@ -509,13 +537,35 @@ impl FeelTheBasaApp {
         }
     }
 
+    fn on_signed_selected_with_result(was_signed: bool, bw: BitWidth, dec_text: &str) -> Result<u128, std::num::ParseIntError> {
+        let dec = if was_signed {
+            match bw {
+                BitWidth::_32BIT =>
+                    i32::from_str_radix(&dec_text, 10)? as u128,
+                BitWidth::_64BIT =>
+                    i64::from_str_radix(&dec_text, 10)? as u128,
+                BitWidth::_128BIT =>
+                    i128::from_str_radix(&dec_text, 10)? as u128,
+            }
+        } else {
+            match bw {
+                BitWidth::_32BIT =>
+                    u32::from_str_radix(&dec_text, 10)? as u128,
+                BitWidth::_64BIT =>
+                    u64::from_str_radix(&dec_text, 10)? as u128,
+                BitWidth::_128BIT =>
+                    u128::from_str_radix(&dec_text, 10)? as u128,
+            }
+        };
+        Ok(dec)
+    }
+
     fn on_signed_selected(&self) {
-        let bit_width = self.bit_width.get();
         let was_signed = self.signed_menu_item.checked();
-        let dec_text = self.dec_edit.text();
         self.signed_menu_item.set_checked(!was_signed);
-        if let Ok(bytes) = dec_text.as_str().parse_to_128bit(!was_signed, bit_width) {
-            self.refresh_value_by_dec(&bytes, TextInputType::Bin)
+
+        if let Ok(dec) = Self::on_signed_selected_with_result(was_signed, self.bit_width.get(), &self.dec_edit.text()) {
+            self.refresh_value_by_dec(&dec.to_ne_bytes(), TextInputType::Bin)
         }
     }
 

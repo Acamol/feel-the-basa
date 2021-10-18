@@ -18,10 +18,10 @@ cargo build --release
 ## TODO
 * ~~Support 64-bit and 128-bit data.~~
 * ~~Use IPv6 address when 128-bit data is used.~~
-* Format 32-bit IP address as IPv4-mapped IPv6 address.
+* Format 32-bit IP address as IPv4-mapped IPv6 address when 128-bit is selected.
 * Support 3-bit IOCTL access mode.
 * Replace the icon with a more dark background friendly one.
 
 ## Known Bugs
-* Bug: When on signed mode with negative number, uncheck signed mode should result in unsigned equivalent and vice vera.
+* ~~Bug: When on signed mode with negative number, uncheck signed mode should result in unsigned equivalent and vice vera.~~
 * Bug: One can enter Bin input longer than is valid by the checked bit width mode.
