@@ -424,7 +424,9 @@ impl FeelTheBasaApp {
         let dirbits = dir_r << FtBA::DIRSHIFT;
         let mask = !(FtBA::DIRMASK << FtBA::DIRSHIFT);
 
-        let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | dirbits;
+        let signed = self.signed_menu_item.checked();
+        let dec = if signed { self.dec_edit.text().parse::<i32>().unwrap() as u32 } else { self.dec_edit.text().parse::<u32>().unwrap() };
+        let dec = dec & mask | dirbits;
         let mut u = Int32or64or128 { _u128: 0 };
         u._u32 = dec;
         self.refresh_value_by_dec(&unsafe {u._u128.to_ne_bytes()}, TextInputType::IoctlDir);
@@ -447,7 +449,9 @@ impl FeelTheBasaApp {
         let nrbits = number << FtBA::NRSHIFT;
         let mask = !(FtBA::NRMASK << FtBA::NRSHIFT);
 
-        let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | nrbits;
+        let signed = self.signed_menu_item.checked();
+        let dec = if signed { self.dec_edit.text().parse::<i32>().unwrap() as u32 } else { self.dec_edit.text().parse::<u32>().unwrap() };
+        let dec = dec & mask | nrbits;
         let mut u = Int32or64or128 { _u128: 0 };
         u._u32 = dec;
         self.refresh_value_by_dec(&unsafe {u._u128.to_ne_bytes()}, TextInputType::IoctlNumber);
@@ -472,7 +476,9 @@ impl FeelTheBasaApp {
         let typebits = b << FtBA::TYPESHIFT;
         let mask = !(FtBA::TYPEMASK << FtBA::TYPESHIFT);
 
-        let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | typebits;
+        let signed = self.signed_menu_item.checked();
+        let dec = if signed { self.dec_edit.text().parse::<i32>().unwrap() as u32 } else { self.dec_edit.text().parse::<u32>().unwrap() };
+        let dec = dec & mask | typebits;
         let mut u = Int32or64or128 { _u128: 0 };
         u._u32 = dec;
         self.refresh_value_by_dec(&unsafe { u._u128.to_ne_bytes() }, TextInputType::IoctlFamily);
@@ -496,7 +502,9 @@ impl FeelTheBasaApp {
         let sizebits = size << FtBA::SIZESHIFT;
         let mask = !(FtBA::SIZEMASK << FtBA::SIZESHIFT);
 
-        let dec = self.dec_edit.text().parse::<u32>().unwrap() & mask | sizebits;
+        let signed = self.signed_menu_item.checked();
+        let dec = if signed { self.dec_edit.text().parse::<i32>().unwrap() as u32 } else { self.dec_edit.text().parse::<u32>().unwrap() };
+        let dec = dec & mask | sizebits;
         let mut u = Int32or64or128 { _u128: 0 };
         u._u32 = dec;
         self.refresh_value_by_dec(&unsafe { u._u128.to_ne_bytes() }, TextInputType::IoctlSize);
