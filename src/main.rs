@@ -9,6 +9,7 @@ use native_windows_derive as nwd;
 use nwd::NwgUi;
 use nwg::NativeUi;
 use std::cell::Cell;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use nwg_extension::tooltip::OneArgRegister;
 use bytes::Int32or64or128;
@@ -255,12 +256,10 @@ impl FeelTheBasaApp {
                     self.ip_edit.set_text(&format!("{}.{}.{}.{}", it.next().unwrap(), it.next().unwrap(), it.next().unwrap(), it.next().unwrap()));
                 },
                 BitWidth::_128BIT => {
-                        let mut s = String::with_capacity(39);
-                        for i in (0..dec.len()).rev().step_by(2) {
-                            let m = [dec[i-1], dec[i]];
-                            s.push_str(&format!("{:X}:", u16::from_ne_bytes(m)));
-                        }
-                        self.ip_edit.set_text(&s[..s.len()-1]);
+                        let mut rev = *dec;
+                        rev.reverse();
+                        let ip = Ipv6Addr::from(rev);
+                        self.ip_edit.set_text(&ip.to_string());
                 },
                 _ => (),
             }
@@ -300,39 +299,27 @@ impl FeelTheBasaApp {
 
         let dec = match bw {
             BitWidth::_32BIT => {
-                let t: Vec<&str> = s.split(".").collect();
-                if t.len() != 4 || t.iter().any(|x| x.is_empty() || x.chars().any(|y| !y.is_numeric()) || x.parse::<i32>().unwrap() > 255) {
-                    return;
+                let mut bytes = [0u8; 16];
+                if let Ok(r) = s.parse::<Ipv4Addr>() {
+                    let octets = r.octets();
+                    for (i, b) in bytes.iter_mut().take(4).rev().enumerate() {
+                        *b = octets[i];
+                    }
+                } else {
+                    return
                 }
-
-                let ip: [u8; 4] = [t[3].parse().unwrap(), t[2].parse().unwrap(), t[1].parse().unwrap(), t[0].parse().unwrap()];
-                let mut u = Int32or64or128 { _u128: 0 };
-                u._u32 = u32::from_ne_bytes(ip);
-                unsafe { u._u128.to_ne_bytes() }
+                bytes
             }
             BitWidth::_64BIT =>
                 return,
             BitWidth::_128BIT => {
-                self.lock.set(true);
-                let t: Vec<_> = s.split(":").collect();
-                if t.len() != 8 || t.iter().any(|x| x.is_empty() || x.len() > 4 || x.chars().any(|c| match c {
-                    '0'..='9' | 'a'..='f' | 'A'..='F' => false,
-                    _ => true
-                })) {
-                    self.bin_edit.set_text("invaild ip");
-                    self.lock.set(false);
-                    return;
+                if let Ok(r) = s.parse::<Ipv6Addr>() {
+                    let mut rev = r.octets();
+                    rev.reverse();
+                    rev
+                } else {
+                    return
                 }
-
-                let mut i = 0;
-                let mut ip = [0u8; 16];
-                for s in t.iter().rev() {
-                    let padded = format!("{:0>4}", s);
-                    ip[i+1] = u8::from_str_radix(&padded[0..2], 16).unwrap();
-                    ip[i] = u8::from_str_radix(&padded[2..4], 16).unwrap(); 
-                    i += 2;
-                }
-                ip
             }
         };
 
