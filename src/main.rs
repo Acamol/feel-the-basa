@@ -3,6 +3,7 @@
 mod icon;
 mod nwg_extension;
 mod bytes;
+mod error;
 
 use native_windows_gui as nwg;
 use native_windows_derive as nwd;
@@ -11,10 +12,15 @@ use nwg::NativeUi;
 use std::cell::Cell;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
+use reqwest;
+use regex::Regex;
+use semver::{VersionReq, Version};
+
 use nwg_extension::tooltip::OneArgRegister;
 use bytes::Int32or64or128;
 use bytes::_128bit::{ParseTo128Bit as _, ToStr as _, ToBinStr as _};
 use bytes::BitWidth as BitWidth;
+use error::Error;
 
 
 #[derive(PartialEq)]
@@ -57,7 +63,7 @@ pub struct FeelTheBasaApp {
     signed_menu_item: nwg::MenuItem,
 
     #[nwg_control(parent: mode_menu)]
-    separator: nwg::MenuSeparator,
+    mode_separator: nwg::MenuSeparator,
 
     #[nwg_control(text: "32-bit", parent: mode_menu, check: true)]
     #[nwg_events( OnMenuItemSelected: [FtBA::on_32bit_selected]) ]
@@ -77,6 +83,13 @@ pub struct FeelTheBasaApp {
     #[nwg_control(text: "Hotkeys", parent: help_menu)]
     #[nwg_events( OnMenuItemSelected: [FtBA::on_hotkeys])]
     hotkeys_menu_item: nwg::MenuItem,
+
+    #[nwg_control(text: "Check for Updates", parent: help_menu)]
+    #[nwg_events( OnMenuItemSelected: [FtBA::on_check_for_updates])]
+    check_for_updates_menu_item: nwg::MenuItem,
+
+    #[nwg_control(parent: help_menu)]
+    help_separator: nwg::MenuSeparator,
 
     #[nwg_control(text: "About", parent: help_menu)]
     #[nwg_events( OnMenuItemSelected: [FtBA::about])]
@@ -625,6 +638,34 @@ impl FeelTheBasaApp {
         let dec_str = self.dec_edit.text();
         if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::_128BIT) {
             self.refresh_value_by_dec(&bytes, TextInputType::None);
+        }
+    }
+
+    fn on_check_for_updates_result(&self) -> Result<String, Error> {
+        let re = Regex::new(r"v(\d+\.\d+\.\d+)").unwrap();
+        let version = option_env!("CARGO_PKG_VERSION").unwrap();
+        let client = reqwest::blocking::Client::builder()
+            .user_agent("FeelTheBasa")
+            .build()?;
+        let res = client.get("https://api.github.com/repos/Acamol/feel-the-basa/releases")
+            .send()?
+            .text()?;
+        let cap = re.captures(res.as_str()).ok_or_else(|| Error::RegexError)?;
+        let req = VersionReq::parse(&format!("<{}", cap.get(1).ok_or_else(|| Error::ReqwestError)?.as_str()))?;
+        let content = if req.matches(&Version::parse(version).unwrap()) {
+            "New version is available.\nDownload the latest version from GitHub."
+        } else {
+            "No updates are available.\nYou are already using the latest version."
+        };
+        Ok(String::from(content))
+    }
+
+    fn on_check_for_updates(&self) {
+        let title = "Check for Updates";
+        if let Ok(content) = self.on_check_for_updates_result() {
+            nwg::modal_info_message(&self.window, title, &content);
+        } else {
+            nwg::modal_error_message(&self.window, title, "Failed to check for updates.\n\nPlease try again later, or report an issue on GitHub if it persists.");
         }
     }
 }
