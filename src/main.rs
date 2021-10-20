@@ -15,6 +15,7 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 use reqwest;
 use regex::Regex;
 use semver::{VersionReq, Version};
+use paste;
 
 use nwg_extension::tooltip::OneArgRegister;
 use bytes::Int32or64or128;
@@ -35,6 +36,22 @@ enum TextInputType {
     IoctlDir,
     IoctlSize,
     None,
+}
+
+macro_rules! on_bit_selected_fn {
+    ($bits:ident) => {
+        paste::paste! {
+            fn [<on $bits bit_selected>](&self) {
+                self.bit_menu_check_only_one(BitWidth::[<$bits BIT>]);
+                self.bit_width.set(BitWidth::[<$bits BIT>]);
+                let signed = self.signed_menu_item.checked();
+                let dec_str = self.dec_edit.text();
+                if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::[<$bits BIT>]) {
+                    self.refresh_value_by_dec(&bytes, TextInputType::None);
+                }
+            }
+        }
+    };
 }
 
 type FtBA = FeelTheBasaApp;
@@ -586,7 +603,6 @@ impl FeelTheBasaApp {
         self.ioctl_family_edit.set_readonly(true);
         self.ioctl_number_edit.set_readonly(true);
         self.ioctl_size_edit.set_readonly(true);
-        self.ioctl_size_edit.set_limit(15);
 
         match bits {
             BitWidth::_32BIT => {
@@ -595,6 +611,7 @@ impl FeelTheBasaApp {
                 self.ioctl_dir_edit.set_readonly(false);
                 self.ioctl_family_edit.set_readonly(false);
                 self.ioctl_number_edit.set_readonly(false);
+                self.ioctl_size_edit.set_limit(15);
                 self.ioctl_size_edit.set_readonly(false);
             },
             BitWidth::_64BIT => {
@@ -611,35 +628,11 @@ impl FeelTheBasaApp {
         self.text_edit.set_limit(bits.to_num_bytes());
     }
 
-    fn on_32bit_selected(&self) {
-        self.bit_menu_check_only_one(BitWidth::_32BIT);
-        self.bit_width.set(BitWidth::_32BIT);
-        let signed = self.signed_menu_item.checked();
-        let dec_str = self.dec_edit.text();
-        if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::_32BIT) {
-            self.refresh_value_by_dec(&bytes, TextInputType::None);
-        }
-    }
+    on_bit_selected_fn!(_32);
 
-    fn on_64bit_selected(&self) {
-        self.bit_menu_check_only_one(BitWidth::_64BIT);
-        self.bit_width.set(BitWidth::_64BIT);
-        let signed = self.signed_menu_item.checked();
-        let dec_str = self.dec_edit.text();
-        if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::_64BIT) {
-            self.refresh_value_by_dec(&bytes, TextInputType::None);
-        }
-    }
+    on_bit_selected_fn!(_64);
 
-    fn on_128bit_selected(&self) {
-        self.bit_menu_check_only_one(BitWidth::_128BIT);
-        self.bit_width.set(BitWidth::_128BIT);
-        let signed = self.signed_menu_item.checked();
-        let dec_str = self.dec_edit.text();
-        if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::_128BIT) {
-            self.refresh_value_by_dec(&bytes, TextInputType::None);
-        }
-    }
+    on_bit_selected_fn!(_128);
 
     fn on_check_for_updates_result(&self) -> Result<String, Error> {
         let re = Regex::new(r"v(\d+\.\d+\.\d+)").unwrap();
