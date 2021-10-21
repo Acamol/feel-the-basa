@@ -39,5 +39,6 @@ fn main() -> std::io::Result<()> {
     write!(version_file, "{}", version_with_args)?;
     embed_resource::compile("resource/icon.rc");
     embed_resource::compile("resource/version.rc");
+    embed_resource::compile("resource/feel_the_basa.rc");
     std::io::Result::Ok(())
 }
