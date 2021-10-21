@@ -12,7 +12,7 @@ use nwg::NativeUi;
 use std::cell::Cell;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use reqwest;
+use tinyget;
 use regex::Regex;
 use semver::{VersionReq, Version};
 use paste;
@@ -598,7 +598,6 @@ impl FeelTheBasaApp {
         self._32bit_menu_item.set_checked(false);
         self._64bit_menu_item.set_checked(false);
         self._128bit_menu_item.set_checked(false);
-        self.ip_edit.set_readonly(true);
         self.ioctl_dir_edit.set_readonly(true);
         self.ioctl_family_edit.set_readonly(true);
         self.ioctl_number_edit.set_readonly(true);
@@ -616,6 +615,7 @@ impl FeelTheBasaApp {
             },
             BitWidth::_64BIT => {
                 self._64bit_menu_item.set_checked(true);
+                self.ip_edit.set_readonly(true);
             }
             BitWidth::_128BIT => {
                 self._128bit_menu_item.set_checked(true);
@@ -637,13 +637,10 @@ impl FeelTheBasaApp {
     fn on_check_for_updates_result(&self) -> Result<String, Error> {
         let re = Regex::new(r"v(\d+\.\d+\.\d+)").unwrap();
         let version = option_env!("CARGO_PKG_VERSION").unwrap();
-        let client = reqwest::blocking::Client::builder()
-            .user_agent("FeelTheBasa")
-            .build()?;
-        let res = client.get("https://api.github.com/repos/Acamol/feel-the-basa/releases")
-            .send()?
-            .text()?;
-        let cap = re.captures(res.as_str()).ok_or_else(|| Error::RegexError)?;
+        let res = tinyget::get("https://api.github.com/repos/Acamol/feel-the-basa/releases")
+            .with_header("User-Agent", "FeelTheBasa")
+            .send()?;
+        let cap = re.captures(res.as_str()?).ok_or_else(|| Error::RegexError)?;
         let req = VersionReq::parse(&format!("<{}", cap.get(1).ok_or_else(|| Error::ReqwestError)?.as_str()))?;
         let content = if req.matches(&Version::parse(version).unwrap()) {
             "New version is available.\nDownload the latest version from GitHub."

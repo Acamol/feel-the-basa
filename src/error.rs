@@ -1,5 +1,5 @@
-use reqwest;
 use semver;
+use tinyget;
 
 pub enum Error {
     ReqwestError,
@@ -7,8 +7,8 @@ pub enum Error {
     SemverError,
 }
 
-impl From<reqwest::Error> for Error {
-    fn from(_: reqwest::Error) -> Error {
+impl From<tinyget::Error> for Error {
+    fn from(_: tinyget::Error) -> Error {
         Error::ReqwestError
     }
 }

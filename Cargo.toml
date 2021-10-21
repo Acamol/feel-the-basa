@@ -7,7 +7,7 @@ authors = ["Aviad Gafni <gaf@duck.com>"]
 [dependencies]
 native-windows-derive = "1.0.4"
 native-windows-gui = "1.0.12"
-reqwest = { version = "0.11.6", features = ["blocking"]}
+tinyget = { version = "1.0.0", features = ["https"]}
 regex = "1.5.4"
 semver = "1.0.4"
 paste = "1.0"
