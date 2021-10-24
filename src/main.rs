@@ -451,11 +451,12 @@ impl FeelTheBasaApp {
         }
 
         let s: &str = &self.ioctl_dir_edit.text();
-        let dir_r = match &s.to_uppercase()[..] {
-            "NONE" => 0b0,
-            "READ" => 0b1,
-            "WRITE" => 0b10,
-            "READ/WRITE" | "WRITE/READ" => 0b11,
+        let dir_r = match s.to_uppercase().as_ref() {
+            "N" | "NONE" => 0b0,
+            "R" | "READ" => 0b1,
+            "W" | "WRITE" => 0b10,
+            "READ/WRITE" | "WRITE/READ" | "READ\\WRITE" | "WRITE\\READ"
+            | "R/W" | "W/R" | "R\\W" | "W\\R" => 0b11,
             _ => return
         };
 
