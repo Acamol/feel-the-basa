@@ -54,6 +54,26 @@ macro_rules! on_bit_selected_fn {
     };
 }
 
+macro_rules! refresh_ioctl_field {
+    ($self:ident, $initial:expr, $type:ident) => {
+        paste::paste! {
+            let bits = $initial << FtBA::[<$type SHIFT>];
+            let mask = !(FtBA::[<$type MASK>] << FtBA::[<$type SHIFT>]);
+
+            let signed = $self.signed_menu_item.checked();
+            let dec = if let Ok(r) = bytes::_32bit::parse_as_u32_decimal(signed, &$self.dec_edit.text()) {
+                r & mask | bits
+            } else {
+                return
+            };
+
+            let mut u = Int32or64or128 { _u128: 0 };
+            u._u32 = dec;
+            $self.refresh_value_by_dec(&unsafe {u._u128.to_ne_bytes()}, TextInputType::IoctlDir);
+        }
+    };
+}
+
 type FtBA = FeelTheBasaApp;
 
 #[derive(Default, NwgUi)]
@@ -438,17 +458,10 @@ impl FeelTheBasaApp {
             "READ/WRITE" | "WRITE/READ" => 0b11,
             _ => return
         };
-        let dirbits = dir_r << FtBA::DIRSHIFT;
-        let mask = !(FtBA::DIRMASK << FtBA::DIRSHIFT);
 
-        let signed = self.signed_menu_item.checked();
-        let dec = if signed { self.dec_edit.text().parse::<i32>().unwrap() as u32 } else { self.dec_edit.text().parse::<u32>().unwrap() };
-        let dec = dec & mask | dirbits;
-        let mut u = Int32or64or128 { _u128: 0 };
-        u._u32 = dec;
-        self.refresh_value_by_dec(&unsafe {u._u128.to_ne_bytes()}, TextInputType::IoctlDir);
+        refresh_ioctl_field!(self, dir_r, DIR);
     }
-    
+
     fn on_number_change(&self) {
         if self.lock.get() {
             return;
@@ -463,15 +476,8 @@ impl FeelTheBasaApp {
             Ok(r @ 0..=255) => r,
             _ => return
         };
-        let nrbits = number << FtBA::NRSHIFT;
-        let mask = !(FtBA::NRMASK << FtBA::NRSHIFT);
 
-        let signed = self.signed_menu_item.checked();
-        let dec = if signed { self.dec_edit.text().parse::<i32>().unwrap() as u32 } else { self.dec_edit.text().parse::<u32>().unwrap() };
-        let dec = dec & mask | nrbits;
-        let mut u = Int32or64or128 { _u128: 0 };
-        u._u32 = dec;
-        self.refresh_value_by_dec(&unsafe {u._u128.to_ne_bytes()}, TextInputType::IoctlNumber);
+        refresh_ioctl_field!(self, number, NR);
     }
 
     fn on_family_change(&self) {
@@ -490,15 +496,7 @@ impl FeelTheBasaApp {
 
         let b = s.chars().next().unwrap() as u32;
 
-        let typebits = b << FtBA::TYPESHIFT;
-        let mask = !(FtBA::TYPEMASK << FtBA::TYPESHIFT);
-
-        let signed = self.signed_menu_item.checked();
-        let dec = if signed { self.dec_edit.text().parse::<i32>().unwrap() as u32 } else { self.dec_edit.text().parse::<u32>().unwrap() };
-        let dec = dec & mask | typebits;
-        let mut u = Int32or64or128 { _u128: 0 };
-        u._u32 = dec;
-        self.refresh_value_by_dec(&unsafe { u._u128.to_ne_bytes() }, TextInputType::IoctlFamily);
+        refresh_ioctl_field!(self, b, TYPE);
     }
 
     fn on_size_change(&self) {
@@ -516,15 +514,7 @@ impl FeelTheBasaApp {
             _ => return
         };
 
-        let sizebits = size << FtBA::SIZESHIFT;
-        let mask = !(FtBA::SIZEMASK << FtBA::SIZESHIFT);
-
-        let signed = self.signed_menu_item.checked();
-        let dec = if signed { self.dec_edit.text().parse::<i32>().unwrap() as u32 } else { self.dec_edit.text().parse::<u32>().unwrap() };
-        let dec = dec & mask | sizebits;
-        let mut u = Int32or64or128 { _u128: 0 };
-        u._u32 = dec;
-        self.refresh_value_by_dec(&unsafe { u._u128.to_ne_bytes() }, TextInputType::IoctlSize);
+        refresh_ioctl_field!(self, size, SIZE);
     }
 
     fn exit(&self) {
