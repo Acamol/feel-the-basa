@@ -88,6 +88,10 @@ pub struct FeelTheBasaApp {
     #[nwg_control(text: "&File")]
     window_menu: nwg::Menu,
 
+    #[nwg_control(text: "Clear", parent: window_menu)]
+    #[nwg_events( OnMenuItemSelected: [FtBA::on_clear_selected])]
+    clear_menu_item: nwg::MenuItem,
+
     #[nwg_control(text: "Close", parent: window_menu)]
     #[nwg_events( OnMenuItemSelected: [FtBA::exit])]
     exit_menu_item: nwg::MenuItem,
@@ -648,6 +652,10 @@ impl FeelTheBasaApp {
         } else {
             nwg::modal_error_message(&self.window, title, "Failed to check for updates.\n\nPlease try again later, or report an issue on GitHub if it persists.");
         }
+    }
+
+    fn on_clear_selected(&self) {
+        self.refresh_value_by_dec(&[0;16], TextInputType::None);
     }
 }
 
