@@ -39,16 +39,6 @@ pub union Int32or64or128 {
     pub _u128: u128
 }
 
-pub mod _32bit {
-    pub fn parse_as_u32_decimal(signed: bool, text: &str) -> Result<u32, std::num::ParseIntError> {
-        if signed {
-            text.parse::<i32>().map(|i| i as u32)
-        } else {
-            text.parse::<u32>()
-        }
-    }
-}
-
 pub mod _128bit {
     use super::*;
 

@@ -54,26 +54,6 @@ macro_rules! on_bit_selected_fn {
     };
 }
 
-macro_rules! refresh_ioctl_field {
-    ($self:ident, $initial:expr, $type:ident) => {
-        paste::paste! {
-            let bits = $initial << FtBA::[<$type SHIFT>];
-            let mask = !(FtBA::[<$type MASK>] << FtBA::[<$type SHIFT>]);
-
-            let signed = $self.signed_menu_item.checked();
-            let dec = if let Ok(r) = bytes::_32bit::parse_as_u32_decimal(signed, &$self.dec_edit.text()) {
-                r & mask | bits
-            } else {
-                return
-            };
-
-            let mut u = Int32or64or128 { _u128: 0 };
-            u._u32 = dec;
-            $self.refresh_value_by_dec(&unsafe {u._u128.to_ne_bytes()}, TextInputType::IoctlDir);
-        }
-    };
-}
-
 type FtBA = FeelTheBasaApp;
 
 #[derive(Default, NwgUi)]
@@ -209,22 +189,22 @@ pub struct FeelTheBasaApp {
 
     #[nwg_control(text: "0", limit: 3)]
     #[nwg_layout_item(layout: grid, row: 7, col: 0, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::on_number_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_ioctl_number_change] )]
     ioctl_number_edit: nwg::TextInput,
 
     #[nwg_control()]
     #[nwg_layout_item(layout: grid, row: 7, col: 1, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::on_family_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_ioctl_family_change] )]
     ioctl_family_edit: nwg::TextInput,
 
     #[nwg_control(text: "0")]
     #[nwg_layout_item(layout: grid, row: 7, col: 2, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::on_size_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_ioctl_size_change] )]
     ioctl_size_edit: nwg::TextInput,
 
     #[nwg_control(text: "None")]
     #[nwg_layout_item(layout: grid, row: 7, col: 3, col_span: 1)]
-    #[nwg_events( OnTextInput: [FtBA::on_dir_change] )]
+    #[nwg_events( OnTextInput: [FtBA::on_ioctl_dir_change] )]
     ioctl_dir_edit: nwg::TextInput,
 
     lock: Cell<bool>,
@@ -445,7 +425,23 @@ impl FeelTheBasaApp {
         self.refresh_value_by_dec(&bytes, TextInputType::Text);
     }
 
-    fn on_dir_change(&self) {
+    fn on_ioctl_number_change(&self) {
+        self.on_ioctl_change(TextInputType::IoctlNumber)
+    }
+
+    fn on_ioctl_family_change(&self) {
+        self.on_ioctl_change(TextInputType::IoctlFamily)
+    }
+
+    fn on_ioctl_size_change(&self) {
+        self.on_ioctl_change(TextInputType::IoctlSize)
+    }
+
+    fn on_ioctl_dir_change(&self) {
+        self.on_ioctl_change(TextInputType::IoctlDir)
+    }
+
+    fn on_ioctl_change(&self, tip: TextInputType) {
         if self.lock.get() {
             return;
         }
@@ -454,8 +450,8 @@ impl FeelTheBasaApp {
             return;
         }
 
-        let s: &str = &self.ioctl_dir_edit.text();
-        let dir_r = match s.to_uppercase().as_ref() {
+        let dir_s: &str = &self.ioctl_dir_edit.text();
+        let mut dir = match dir_s.to_uppercase().as_ref() {
             "N" | "NONE" => 0b0,
             "R" | "READ" => 0b1,
             "W" | "WRITE" => 0b10,
@@ -463,63 +459,33 @@ impl FeelTheBasaApp {
             | "R/W" | "W/R" | "R\\W" | "W\\R" => 0b11,
             _ => return
         };
+        dir <<= FtBA::DIRSHIFT;
 
-        refresh_ioctl_field!(self, dir_r, DIR);
-    }
-
-    fn on_number_change(&self) {
-        if self.lock.get() {
-            return;
-        }
-
-        if self.bit_width.get() != BitWidth::_32BIT {
-            return;
-        }
-
-        let s = &self.ioctl_number_edit.text();
-        let number = match s.parse::<u32>() {
+        let number_s = &self.ioctl_number_edit.text();
+        let mut number = match number_s.parse::<u32>() {
             Ok(r @ 0..=255) => r,
             _ => return
         };
+        number <<= FtBA::NRSHIFT;
 
-        refresh_ioctl_field!(self, number, NR);
-    }
-
-    fn on_family_change(&self) {
-        if self.lock.get() {
-            return;
-        }
-
-        if self.bit_width.get() != BitWidth::_32BIT {
-            return;
-        }
-
-        let s = &self.ioctl_family_edit.text();
-        if s.len() != 1 {
+        let family_s = &self.ioctl_family_edit.text();
+        if family_s.len() > 1 {
             return
         }
 
-        let b = s.chars().next().unwrap() as u32;
+        let mut family = family_s.chars().next().unwrap_or(0 as char) as u32;
+        family <<= FtBA::TYPESHIFT;
 
-        refresh_ioctl_field!(self, b, TYPE);
-    }
-
-    fn on_size_change(&self) {
-        if self.lock.get() {
-            return;
-        }
-
-        if self.bit_width.get() != BitWidth::_32BIT {
-            return;
-        }
-
-        let s = &self.ioctl_size_edit.text();
-        let size = match s.parse::<u32>() {
+        let size_s = &self.ioctl_size_edit.text();
+        let mut size = match size_s.parse::<u32>() {
             Ok(r @ 0..=FtBA::SIZEMASK) => r,
             _ => return
         };
+        size <<= FtBA::SIZESHIFT;
 
-        refresh_ioctl_field!(self, size, SIZE);
+        let mut dec = Int32or64or128 { _u128: 0 };
+        dec._u32 = dir | number | family | size;
+        self.refresh_value_by_dec(&unsafe {dec._u128.to_ne_bytes()}, tip)
     }
 
     fn exit(&self) {
