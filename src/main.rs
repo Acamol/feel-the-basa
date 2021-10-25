@@ -39,17 +39,19 @@ enum TextInputType {
 }
 
 macro_rules! on_bit_selected_fn {
-    ($bits:ident) => {
+    ( $( $bits:ident )+ ) => {
         paste::paste! {
-            fn [<on $bits bit_selected>](&self) {
-                self.bit_menu_check_only_one(BitWidth::[<$bits BIT>]);
-                self.bit_width.set(BitWidth::[<$bits BIT>]);
-                let signed = self.signed_menu_item.checked();
-                let dec_str = self.dec_edit.text();
-                if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::[<$bits BIT>]) {
-                    self.refresh_value_by_dec(&bytes, TextInputType::None);
+            $(
+                fn [<on $bits bit_selected>](&self) {
+                    self.bit_menu_check_only_one(BitWidth::[<$bits BIT>]);
+                    self.bit_width.set(BitWidth::[<$bits BIT>]);
+                    let signed = self.signed_menu_item.checked();
+                    let dec_str = self.dec_edit.text();
+                    if let Ok(bytes) = dec_str.as_str().parse_to_128bit(signed, BitWidth::[<$bits BIT>]) {
+                        self.refresh_value_by_dec(&bytes, TextInputType::None);
+                    }
                 }
-            }
+            )+
         }
     };
 }
@@ -589,21 +591,17 @@ impl FeelTheBasaApp {
         self.text_edit.set_limit(bits.to_num_bytes());
     }
 
-    on_bit_selected_fn!(_32);
-
-    on_bit_selected_fn!(_64);
-
-    on_bit_selected_fn!(_128);
+    on_bit_selected_fn!(_32 _64 _128);
 
     fn on_check_for_updates_result(&self) -> Result<String, Error> {
-        let re = Regex::new(r"v(\d+\.\d+\.\d+)").unwrap();
+        let re = Regex::new(r"v(\d+\.\d+\.\d+)")?;
         let version = option_env!("CARGO_PKG_VERSION").unwrap();
         let res = tinyget::get("https://api.github.com/repos/Acamol/feel-the-basa/releases")
             .with_header("User-Agent", "FeelTheBasa")
             .send()?;
         let cap = re.captures(res.as_str()?).ok_or_else(|| Error::RegexError)?;
         let req = VersionReq::parse(&format!("<{}", cap.get(1).ok_or_else(|| Error::ReqwestError)?.as_str()))?;
-        let content = if req.matches(&Version::parse(version).unwrap()) {
+        let content = if req.matches(&Version::parse(version)?) {
             "New version is available.\nDownload the latest version from GitHub."
         } else {
             "No updates are available.\nYou are already using the latest version."
