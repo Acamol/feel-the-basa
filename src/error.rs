@@ -1,5 +1,5 @@
 use semver;
-use tinyget;
+use minreq;
 use regex;
 
 pub enum Error {
@@ -8,8 +8,8 @@ pub enum Error {
     SemverError,
 }
 
-impl From<tinyget::Error> for Error {
-    fn from(_: tinyget::Error) -> Error {
+impl From<minreq::Error> for Error {
+    fn from(_: minreq::Error) -> Error {
         Error::ReqwestError
     }
 }

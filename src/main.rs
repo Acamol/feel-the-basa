@@ -12,7 +12,7 @@ use nwg::NativeUi;
 use std::cell::Cell;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use tinyget;
+use minreq;
 use regex::Regex;
 use semver::{VersionReq, Version};
 use paste;
@@ -596,7 +596,7 @@ impl FeelTheBasaApp {
     fn on_check_for_updates_result(&self) -> Result<String, Error> {
         let re = Regex::new(r"v(\d+\.\d+\.\d+)")?;
         let version = option_env!("CARGO_PKG_VERSION").unwrap();
-        let res = tinyget::get("https://api.github.com/repos/Acamol/feel-the-basa/releases")
+        let res = minreq::get("https://api.github.com/repos/Acamol/feel-the-basa/releases")
             .with_header("User-Agent", "FeelTheBasa")
             .send()?;
         let cap = re.captures(res.as_str()?).ok_or_else(|| Error::RegexError)?;
