@@ -1,13 +1,13 @@
 [package]
 name = "feel_the_basa"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2018"
 authors = ["Aviad Gafni <gaf@duck.com>"]
 
 [dependencies]
 native-windows-derive = "1.0.5"
 native-windows-gui = "1.0.13"
-minreq = { version = "2.7", features = ["https-rustls"]}
+minreq = { version = "2.11", features = ["https-rustls"]}
 regex = "1.7"
 semver = "1.0"
 paste = "1.0"
