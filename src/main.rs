@@ -282,7 +282,7 @@ impl FeelTheBasaApp {
                 BitWidth::_64BIT => dec.iter().take(8),
                 BitWidth::_128BIT => dec.iter().take(16)
             };
-            self.text_edit.set_text(&iter.filter(|&&c| c != 0).map(|&c| c as char).collect::<String>());
+            self.text_edit.set_text(&iter.filter(|&&c| c != 0).map(|&c| c as char).rev().collect::<String>());
         }
 
         if tip != TextInputType::IP {

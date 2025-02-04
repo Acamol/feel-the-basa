@@ -1,6 +1,6 @@
 [package]
 name = "feel_the_basa"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2018"
 authors = ["Aviad Gafni <gaf@duck.com>"]
 
@@ -14,3 +14,7 @@ paste = "1.0"
 
 [build-dependencies]
 embed-resource = "1.6.4"
+
+[profile.release]
+lto = "fat"
+opt-level = 3
